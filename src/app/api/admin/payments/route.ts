@@ -1,0 +1,72 @@
+import { NextResponse } from "next/server";
+import { getServerSession } from "next-auth";
+import { authOptions } from "@/lib/auth";
+import { dataStore } from "@/lib/data-store";
+import { syncWithMongo } from "@/lib/db-sync";
+import { hasRole } from "@/lib/permissions";
+
+export async function GET(request: Request) {
+  const session = await getServerSession(authOptions);
+  const role = (session?.user as any)?.role;
+
+  if (!hasRole(role, ["super_admin", "finance_admin"])) {
+    return NextResponse.json({ error: "Forbidden: Finance Admin privilege required." }, { status: 403 });
+  }
+
+  const { searchParams } = new URL(request.url);
+  const statusFilter = searchParams.get("status");
+
+  await syncWithMongo();
+  let payments = dataStore.getAllPayments();
+  if (statusFilter && statusFilter !== "all") {
+    payments = payments.filter((p) => p.status === statusFilter);
+  }
+
+  // Enrich payment submissions with registration details
+  const enriched = payments.map((p) => {
+    const reg = dataStore.getRegistrationById(p.registrationId);
+    return {
+      ...p,
+      registration: reg,
+    };
+  });
+
+  return NextResponse.json({ payments: enriched });
+}
+
+export async function POST(request: Request) {
+  const session = await getServerSession(authOptions);
+  const role = (session?.user as any)?.role;
+  const reviewerId = (session?.user as any)?.id || "usr-finance-admin-1";
+
+  if (!hasRole(role, ["super_admin", "finance_admin"])) {
+    return NextResponse.json({ error: "Forbidden: Finance Admin privilege required." }, { status: 403 });
+  }
+
+  try {
+    const body = await request.json();
+    const { paymentId, action, rejectionReason } = body;
+
+    if (!paymentId || !action || !["approve", "reject", "resubmit"].includes(action)) {
+      return NextResponse.json(
+        { error: "Invalid payment review payload. Action must be approve, reject, or resubmit." },
+        { status: 400 }
+      );
+    }
+
+    const success = dataStore.reviewPayment(paymentId, reviewerId, action, rejectionReason);
+    if (!success) {
+      return NextResponse.json({ error: "Payment submission not found." }, { status: 404 });
+    }
+
+    return NextResponse.json({
+      success: true,
+      message: `Payment status updated to ${action}d successfully.`,
+    });
+  } catch (error: any) {
+    return NextResponse.json(
+      { error: error?.message || "Failed to process payment review." },
+      { status: 500 }
+    );
+  }
+}

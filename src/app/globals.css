@@ -1,0 +1,192 @@
+@import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;500;600;700&family=Playfair+Display:ital,wght@0,400;0,600;0,700;0,800;0,900;1,400;1,700&family=DM+Sans:wght@400;500;600;700&family=Inter:wght@400;500;600;700&family=Noto+Sans+Devanagari:wght@400;600;700&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    /* 
+      ENHANCED CREATIVE FESTIVAL PALETTE (LIGHT THEME):
+      - Warm Champagne: #F5E8D0 (39 63% 89%)
+      - Warm Surface: #FAF6EE (40 55% 96%)
+      - Deep Burgundy: #681F38 (340 54% 26%)
+      - Royal Plum: #402044 (293 36% 20%)
+      - Sunset Orange: #E87545 (18 79% 59%)
+      - Antique Gold: #D4AD63 (39 58% 61%)
+      - Midnight Charcoal: #191820 (248 14% 11%)
+    */
+    --background: 39 45% 94%;          /* Warm Champagne Tint */
+    --foreground: 248 14% 11%;         /* Midnight Charcoal */
+
+    --card: 40 55% 97%;                /* Warm Pure Surface */
+    --card-foreground: 248 14% 11%;
+
+    --popover: 40 55% 97%;
+    --popover-foreground: 248 14% 11%;
+
+    --primary: 340 54% 26%;            /* Deep Burgundy #681F38 */
+    --primary-foreground: 39 63% 92%;  /* Warm Champagne */
+
+    --secondary: 293 36% 20%;          /* Royal Plum #402044 */
+    --secondary-foreground: 39 63% 92%;
+
+    --muted: 39 30% 88%;               /* Soft Champagne Beige */
+    --muted-foreground: 248 10% 35%;
+
+    --accent: 18 79% 59%;              /* Sunset Orange #E87545 */
+    --accent-foreground: 39 63% 96%;
+
+    --destructive: 354 40% 45%;        /* Muted Rose / Heritage Red */
+    --destructive-foreground: 39 63% 96%;
+
+    --border: 39 35% 80%;              /* Warm Antique Gold / Sandstone */
+    --input: 39 35% 82%;
+    --ring: 18 79% 59%;                /* Sunset Orange ring */
+
+    --radius: 0.625rem;
+  }
+
+  .dark {
+    /* 
+      ENHANCED CREATIVE FESTIVAL PALETTE (DARK THEME):
+      - Midnight Charcoal: #191820 (248 14% 11%)
+      - Dark Plum Canvas: #25202B (267 15% 15%)
+      - Elevated Plum Card: #2E2536 (272 19% 18%)
+      - Deep Burgundy: #681F38
+      - Sunset Orange Accent: #E87545 (18 79% 59%)
+      - Antique Gold Highlight: #D4AD63 (39 58% 61%)
+      - Warm Champagne Typography: #F5E8D0 (39 63% 89%)
+    */
+    --background: 248 14% 11%;         /* Midnight Charcoal #191820 */
+    --foreground: 39 63% 90%;          /* Warm Champagne Typography */
+
+    --card: 267 15% 15%;               /* Deep Royal Plum Surface #25202B */
+    --card-foreground: 39 63% 92%;
+
+    --popover: 272 19% 18%;            /* Elevated Plum #2E2536 */
+    --popover-foreground: 39 63% 92%;
+
+    --primary: 18 79% 59%;             /* Radiant Sunset Orange #E87545 */
+    --primary-foreground: 248 14% 11%;
+
+    --secondary: 293 36% 25%;          /* Deep Royal Plum #402044 */
+    --secondary-foreground: 39 63% 92%;
+
+    --muted: 248 10% 20%;              /* Dark Muted Charcoal */
+    --muted-foreground: 39 25% 68%;
+
+    --accent: 39 58% 61%;              /* Antique Gold #D4AD63 */
+    --accent-foreground: 248 14% 11%;
+
+    --destructive: 354 40% 48%;
+    --destructive-foreground: 39 63% 96%;
+
+    --border: 272 15% 24%;             /* Subtle plum-gold border */
+    --input: 272 15% 24%;
+    --ring: 18 79% 59%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-background text-foreground transition-colors duration-200;
+    font-feature-settings: "rlig" 1, "calt" 1;
+    overflow-x: hidden;
+  }
+}
+
+/* Custom Creative Gradients & Typography Classes */
+.sunset-gradient-text {
+  background: linear-gradient(135deg, #FA8C5E 0%, #E87545 40%, #D4AD63 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.gold-gradient-text {
+  background: linear-gradient(135deg, #F5E8D0 0%, #D4AD63 50%, #B08A42 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.burgundy-gradient-text {
+  background: linear-gradient(135deg, #842A4A 0%, #681F38 60%, #402044 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.fest-glow-gradient {
+  background: radial-gradient(circle at 50% 50%, rgba(232, 117, 69, 0.15), rgba(64, 32, 68, 0.05), transparent 70%);
+}
+
+.dark .fest-glow-gradient {
+  background: radial-gradient(circle at 50% 50%, rgba(232, 117, 69, 0.2), rgba(104, 31, 56, 0.15), transparent 70%);
+}
+
+/* Geometric Heritage Jaali Background Pattern */
+.jaali-bg {
+  background-image: radial-gradient(circle, rgba(212, 173, 99, 0.15) 1.2px, transparent 1.2px);
+  background-size: 24px 24px;
+}
+
+.dark .jaali-bg {
+  background-image: radial-gradient(circle, rgba(212, 173, 99, 0.12) 1.2px, transparent 1.2px);
+  background-size: 24px 24px;
+}
+
+/* Subtle Glowing Borders and Shadows */
+.glow-sunset {
+  box-shadow: 0 8px 32px -4px rgba(232, 117, 69, 0.25);
+}
+
+.glow-burgundy {
+  box-shadow: 0 8px 32px -4px rgba(104, 31, 56, 0.35);
+}
+
+.glow-gold {
+  box-shadow: 0 8px 24px -4px rgba(212, 173, 99, 0.3);
+}
+
+.glass-card {
+  background: rgba(255, 255, 255, 0.8);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+}
+
+.dark .glass-card {
+  background: rgba(37, 32, 43, 0.85);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+}
+
+/* Royal Arch & Geometric Utilities */
+.royal-arch {
+  border-top-left-radius: 9999px;
+  border-top-right-radius: 9999px;
+}
+
+/* Custom Scrollbar */
+::-webkit-scrollbar {
+  width: 9px;
+  height: 9px;
+}
+::-webkit-scrollbar-track {
+  background: hsl(var(--background));
+}
+::-webkit-scrollbar-thumb {
+  background: #D4AD63;
+  border-radius: 6px;
+  border: 2px solid hsl(var(--background));
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #E87545;
+}
+
+/* Smooth selection colors */
+::selection {
+  background: #E87545;
+  color: #FAF3E6;
+}
