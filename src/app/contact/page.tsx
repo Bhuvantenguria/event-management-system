@@ -47,7 +47,7 @@ export default function ContactPage() {
               <div>
                 <span className="font-bold block text-foreground">Campus Address</span>
                 <span className="text-muted-foreground">
-                  Rangmanch Secretariat, Heritage Block A, University Grounds, Lucknow, Uttar Pradesh - 226001
+                  AIIMS Campus, Dalmau Road, Munshiganj, Raebareli, Uttar Pradesh - 229405
                 </span>
               </div>
             </div>
@@ -56,8 +56,7 @@ export default function ContactPage() {
               <Mail className="w-5 h-5 text-heritage-gold flex-shrink-0 mt-0.5" />
               <div>
                 <span className="font-bold block text-foreground">Email Support</span>
-                <span className="text-muted-foreground">support@rangmanchup.in</span>
-                <span className="text-muted-foreground block">finance@rangmanchup.in</span>
+                <span className="text-muted-foreground">swar@aiimsraebareli.edu.in</span>
               </div>
             </div>
 
@@ -65,7 +64,7 @@ export default function ContactPage() {
               <Phone className="w-5 h-5 text-heritage-gold flex-shrink-0 mt-0.5" />
               <div>
                 <span className="font-bold block text-foreground">Festival Helpline</span>
-                <span className="text-muted-foreground">+91 522 234 5678 (Toll Free)</span>
+                <span className="text-muted-foreground">+91 98765 43210 (SWAR Desk)</span>
                 <span className="text-muted-foreground block">+91 94512 88990 (WhatsApp Support)</span>
               </div>
             </div>
@@ -82,7 +81,7 @@ export default function ContactPage() {
           <div className="p-4 rounded-xl bg-heritage-sandstone/15 border border-heritage-gold/20 text-xs text-muted-foreground">
             <p className="font-bold text-foreground mb-1">Anti-Ragging & Safety Notice</p>
             <p>
-              Rangmanch UP enforces strict zero-tolerance anti-ragging policies. 24/7 security
+              AffinityAIIMS enforces strict zero-tolerance anti-ragging policies. 24/7 security
               and campus quick-response marshals are stationed across all festival grounds.
             </p>
           </div>

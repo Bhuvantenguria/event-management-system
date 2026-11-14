@@ -47,7 +47,6 @@ const nextConfig = {
         "mongodb-client-encryption": false,
       };
     }
-    config.cache = false;
     return config;
   },
 };

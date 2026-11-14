@@ -10,21 +10,21 @@ export function HeritageDivider({
   className?: string;
 }) {
   return (
-    <div className={`flex flex-col items-center justify-center my-8 text-center ${className}`}>
+    <div className={`flex flex-col items-center justify-center my-8 text-center max-w-full px-2 ${className}`}>
       {subtitle && (
-        <span className="inline-block text-xs uppercase tracking-[0.25em] font-semibold text-fest-sunset font-sans mb-1.5 px-3 py-0.5 rounded-full bg-fest-sunset/10 border border-fest-sunset/20">
+        <span className="inline-block text-[10px] sm:text-xs uppercase tracking-wider sm:tracking-[0.25em] font-semibold text-fest-sunset font-sans mb-1.5 px-3 py-0.5 rounded-full bg-fest-sunset/10 border border-fest-sunset/20 max-w-full break-words">
           {subtitle}
         </span>
       )}
       {title && (
-        <h2 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-serif font-black text-foreground tracking-tight mb-3">
+        <h2 className="text-xl sm:text-3xl md:text-4xl lg:text-5xl font-serif font-black text-foreground tracking-tight mb-3 break-words max-w-full">
           {title}
         </h2>
       )}
-      <div className="flex items-center justify-center w-full max-w-sm space-x-3 mt-1">
+      <div className="flex items-center justify-center w-full max-w-xs sm:max-w-sm space-x-2 sm:space-x-3 mt-1">
         <div className="h-[1.5px] flex-1 bg-gradient-to-r from-transparent via-fest-sunset/40 to-fest-gold" />
-        <div className="relative p-1 rounded-full bg-fest-burgundy/10 dark:bg-fest-plum border border-fest-gold/40 flex items-center justify-center">
-          <LotusOrnament className="w-5 h-5 text-fest-gold" />
+        <div className="relative p-1 rounded-full bg-fest-burgundy/10 dark:bg-fest-plum border border-fest-gold/40 flex items-center justify-center shrink-0">
+          <LotusOrnament className="w-4 h-4 sm:w-5 sm:h-5 text-fest-gold" />
         </div>
         <div className="h-[1.5px] flex-1 bg-gradient-to-l from-transparent via-fest-sunset/40 to-fest-gold" />
       </div>
@@ -81,7 +81,7 @@ export function CulturalRibbon() {
         <div className="flex items-center space-x-2.5">
           <span className="inline-flex items-center justify-center w-2 h-2 rounded-full bg-fest-sunset shadow-[0_0_8px_#E87545] animate-pulse" />
           <span className="font-bold tracking-wider text-fest-gold-light uppercase">
-            रंगमंच UP 2026 • Festival of Festivals
+            AffinityAIIMS 2026 • Festival of Festivals
           </span>
           <span className="text-fest-gold/40">|</span>
           <span className="text-fest-champagne/90 font-medium">12–15 March 2026</span>

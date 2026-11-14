@@ -32,7 +32,7 @@ export interface CloudinaryUploadResult {
  */
 export async function uploadToCloudinary(
   fileData: string | Buffer,
-  folder: string = "rangmanch26/payments"
+  folder: string = "affinity_aiims/payments"
 ): Promise<CloudinaryUploadResult> {
   if (!isCloudinaryConfigured()) {
     // Graceful fallback for local development without credentials

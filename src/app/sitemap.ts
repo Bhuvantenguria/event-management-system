@@ -1,7 +1,7 @@
 import { MetadataRoute } from "next";
 
 export default function sitemap(): MetadataRoute.Sitemap {
-  const baseUrl = process.env.NEXTAUTH_URL || "https://rangmanchup.in";
+  const baseUrl = process.env.NEXTAUTH_URL || "https://affinityaiims.in";
 
   const routes = [
     "",

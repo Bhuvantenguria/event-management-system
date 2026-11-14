@@ -33,19 +33,11 @@ import { ThemeToggle } from "@/components/theme-toggle";
 
 const ADMIN_NAV = [
   { name: "Overview", href: "/admin", icon: LayoutDashboard },
-  { name: "Events CMS", href: "/admin/events", icon: Calendar },
-  { name: "Registrations", href: "/admin/registrations", icon: Users },
-  { name: "Paytm Payments", href: "/admin/payments", icon: CreditCard },
-  { name: "Gate QR Scanner", href: "/admin/scanner", icon: ScanLine },
-  { name: "Attendance Log", href: "/admin/attendance", icon: FileSpreadsheet },
-  { name: "Sports Tournaments", href: "/admin/sports", icon: Trophy },
-  { name: "Cultural Collections", href: "/admin/cultural", icon: Landmark },
-  { name: "Gallery Media", href: "/admin/gallery", icon: ImageIcon },
-  { name: "Schedule CMS", href: "/admin/schedule", icon: Clock },
-  { name: "Sponsors CMS", href: "/admin/sponsors", icon: Award },
-  { name: "Announcements", href: "/admin/announcements", icon: Bell },
-  { name: "Email SMTP & Logs", href: "/admin/email", icon: Mail },
-  { name: "System Settings", href: "/admin/settings", icon: Settings },
+  { name: "Create & Manage Events", href: "/admin/events", icon: Calendar },
+  { name: "Registrations List", href: "/admin/registrations", icon: Users },
+  { name: "Payment Approvals", href: "/admin/payments", icon: CreditCard },
+  { name: "Gallery Media (CRUD)", href: "/admin/gallery", icon: ImageIcon },
+  { name: "Organizer Paytm QR", href: "/admin/settings", icon: QrCode },
 ];
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
@@ -65,7 +57,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
             <LotusOrnament className="w-4 h-4 text-heritage-gold" />
           </div>
           <span className="font-serif font-bold text-sm text-foreground">
-            रंगमंच UP Admin
+            AffinityAIIMS Admin
           </span>
         </div>
         <div className="flex items-center space-x-2">
@@ -96,7 +88,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                 Admin Control
               </h2>
               <span className="text-[10px] uppercase tracking-widest text-heritage-gold-dark dark:text-heritage-gold font-sans font-bold">
-                {role ? role.replace("_", " ") : "Staff Member"}
+                Administrator
               </span>
             </div>
           </div>
@@ -165,7 +157,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
       </aside>
 
       {/* Main Admin View Container */}
-      <main className="flex-1 p-4 sm:p-6 lg:p-8 overflow-y-auto">
+      <main className="flex-1 p-3 sm:p-6 lg:p-8 overflow-y-auto max-w-full overflow-x-hidden">
         {children}
       </main>
     </div>

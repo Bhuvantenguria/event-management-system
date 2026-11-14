@@ -66,24 +66,24 @@ export function SponsorsSection() {
       </p>
 
       {/* Infinite Scrolling Marquee Track 1 */}
-      <div className="relative w-full overflow-hidden mb-6 py-2">
-        <div className="flex w-max space-x-6 animate-marquee hover:[animation-play-state:paused]">
+      <div className="relative w-full max-w-full overflow-hidden mb-6 py-2">
+        <div className="flex w-max space-x-4 sm:space-x-6 animate-marquee hover:[animation-play-state:paused]">
           {[...SPONSORS_PRIMARY, ...SPONSORS_PRIMARY].map((s, idx) => (
             <div
               key={idx}
-              className="flex items-center space-x-4 px-6 py-4 rounded-2xl bg-card border border-fest-gold/30 shadow-sm hover:border-fest-sunset hover:shadow-lg transition-all min-w-[280px]"
+              className="flex items-center space-x-3 sm:space-x-4 px-4 sm:px-6 py-3 sm:py-4 rounded-2xl bg-card border border-fest-gold/30 shadow-sm hover:border-fest-sunset hover:shadow-lg transition-all min-w-[240px] sm:min-w-[280px]"
             >
-              <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-fest-sunset to-fest-burgundy text-white flex items-center justify-center font-serif font-black text-lg shadow-md flex-shrink-0">
+              <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-xl bg-gradient-to-br from-fest-sunset to-fest-burgundy text-white flex items-center justify-center font-serif font-black text-base sm:text-lg shadow-md flex-shrink-0">
                 {s.name.charAt(0)}
               </div>
               <div className="flex flex-col text-left">
-                <span className="text-[10px] font-sans font-bold uppercase tracking-wider text-fest-sunset">
+                <span className="text-[9px] sm:text-[10px] font-sans font-bold uppercase tracking-wider text-fest-sunset">
                   {s.tag}
                 </span>
-                <h4 className="font-serif text-sm font-bold text-foreground truncate max-w-[170px]">
+                <h4 className="font-serif text-xs sm:text-sm font-bold text-foreground truncate max-w-[150px] sm:max-w-[170px]">
                   {s.name}
                 </h4>
-                <span className="text-[10px] text-muted-foreground truncate max-w-[170px]">
+                <span className="text-[9px] sm:text-[10px] text-muted-foreground truncate max-w-[150px] sm:max-w-[170px]">
                   {s.category}
                 </span>
               </div>
@@ -93,8 +93,8 @@ export function SponsorsSection() {
       </div>
 
       {/* Static / Reverse Marquee Track 2 */}
-      <div className="relative w-full overflow-hidden py-2">
-        <div className="flex w-max space-x-6 animate-marquee-reverse hover:[animation-play-state:paused]">
+      <div className="relative w-full max-w-full overflow-hidden py-2">
+        <div className="flex w-max space-x-4 sm:space-x-6 animate-marquee-reverse hover:[animation-play-state:paused]">
           {[...SPONSORS_SECONDARY, ...SPONSORS_SECONDARY].map((s, idx) => (
             <div
               key={idx}
@@ -118,7 +118,7 @@ export function SponsorsSection() {
       <div className="mt-14 max-w-2xl mx-auto rounded-2xl bg-gradient-to-r from-fest-plum/10 via-fest-sunset/10 to-fest-burgundy/10 border border-fest-gold/30 p-6 text-center">
         <Handshake className="w-8 h-8 text-fest-sunset mx-auto mb-2" />
         <h4 className="font-serif text-lg font-bold text-foreground">
-          Interested in Partnering with Rangmanch UP 2026?
+          Interested in Partnering with AffinityAIIMS 2026?
         </h4>
         <p className="text-xs text-muted-foreground max-w-md mx-auto mt-1 mb-4">
           Connect with 12,000+ collegiate leaders and cultural patrons through title naming rights, campus activation booths, and digital branding.

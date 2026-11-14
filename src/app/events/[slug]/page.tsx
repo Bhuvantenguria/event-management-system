@@ -17,7 +17,9 @@ import {
   Mail,
   Sparkles,
   ArrowRight,
+  Image as ImageIcon,
 } from "lucide-react";
+import { dataStore } from "@/lib/data-store";
 import { formatCurrency } from "@/lib/utils";
 
 // Helper event catalog for dynamic slug resolution
@@ -57,8 +59,8 @@ const EVENT_DIRECTORY: Record<string, any> = {
       "Cross-college duos are permitted.",
     ],
     coordinators: [
-      { name: "Ananya Mishra (Club Lead)", phone: "+91 98765 43210", email: "kathak@rangmanchup.in" },
-      { name: "Rohit Verma (Joint Secy)", phone: "+91 98765 43211", email: "dance@rangmanchup.in" },
+      { name: "Ananya Mishra (Club Lead)", phone: "+91 98765 43210", email: "dance@aiimsraebareli.edu.in" },
+      { name: "Rohit Verma (Joint Secy)", phone: "+91 98765 43211", email: "cultural@aiimsraebareli.edu.in" },
     ],
   },
   "royal-up-football-cup": {
@@ -96,8 +98,8 @@ const EVENT_DIRECTORY: Record<string, any> = {
       "Minimum 11 players required for match kick-off.",
     ],
     coordinators: [
-      { name: "Capt. Vikramaditya Singh (Sports Secy)", phone: "+91 94512 88990", email: "football@rangmanchup.in" },
-      { name: "Tariq Khan (Varsity Coordinator)", phone: "+91 94512 88991", email: "sports@rangmanchup.in" },
+      { name: "Capt. Vikramaditya Singh (Sports Secy)", phone: "+91 94512 88990", email: "sports@aiimsraebareli.edu.in" },
+      { name: "Tariq Khan (Varsity Coordinator)", phone: "+91 94512 88991", email: "swar@aiimsraebareli.edu.in" },
     ],
   },
   "ghazal-and-kavi-sammelan": {
@@ -132,7 +134,7 @@ const EVENT_DIRECTORY: Record<string, any> = {
       "College ID is mandatory.",
     ],
     coordinators: [
-      { name: "Divya Pandey (Lit Society Head)", phone: "+91 98390 11223", email: "poetry@rangmanchup.in" },
+      { name: "Divya Pandey (Lit Society Head)", phone: "+91 98390 11223", email: "lit@aiimsraebareli.edu.in" },
     ],
   },
   "banarasi-handicraft-hackathon": {
@@ -162,22 +164,28 @@ const EVENT_DIRECTORY: Record<string, any> = {
     ],
     eligibility: ["Open to all engineering, design, and business collegiate students."],
     coordinators: [
-      { name: "Aditya Sharma (Arts Club Lead)", phone: "+91 97210 55443", email: "crafts@rangmanchup.in" },
+      { name: "Aditya Sharma (Arts Club Lead)", phone: "+91 97210 55443", email: "arts@aiimsraebareli.edu.in" },
     ],
   },
 };
 
 export default function EventDetailPage({ params }: { params: { slug: string } }) {
-  const event = EVENT_DIRECTORY[params.slug] || {
+  const storeEvent = dataStore.getEventBySlug(params.slug) || dataStore.getEventById(params.slug);
+  const staticEvent = EVENT_DIRECTORY[params.slug];
+
+  const defaultEvent = {
     title: params.slug.replace(/-/g, " ").toUpperCase(),
     slug: params.slug,
     category: "Featured Festival Event",
     description: "Detailed description, rules and registration guidelines for this featured contest.",
     poster:
       "https://images.unsplash.com/photo-1547153760-18fc86324498?q=80&w=1200&auto=format&fit=crop",
+    images: [
+      "https://images.unsplash.com/photo-1547153760-18fc86324498?q=80&w=1200&auto=format&fit=crop",
+    ],
     date: "13 March 2026",
     time: "10:00 AM",
-    venue: "Main Campus Grounds, Lucknow",
+    venue: "AIIMS Raebareli Campus",
     registrationFee: 200,
     participationType: "both",
     minTeamSize: 1,
@@ -195,14 +203,52 @@ export default function EventDetailPage({ params }: { params: { slug: string } }
     eligibility: [
       "Valid College Student ID Card required.",
       "Students enrolled in recognized diploma/degree courses.",
+      "Inter-collegiate teams are welcome.",
     ],
     coordinators: [
-      { name: "Fest Secretariat", phone: "+91 522 234 5678", email: "events@rangmanchup.in" },
+      { name: "Fest Secretariat", phone: "+91 98765 43210", email: "swar@aiimsraebareli.edu.in" },
     ],
   };
 
+  // Safe merge ensuring all array fields are guaranteed arrays
+  const event = {
+    ...defaultEvent,
+    ...(staticEvent || {}),
+    ...(storeEvent || {}),
+    images:
+      storeEvent?.images && storeEvent.images.length > 0
+        ? storeEvent.images
+        : staticEvent?.images && staticEvent.images.length > 0
+        ? staticEvent.images
+        : [storeEvent?.poster || staticEvent?.poster || defaultEvent.poster],
+    rules:
+      Array.isArray((storeEvent as any)?.rules) && (storeEvent as any).rules.length > 0
+        ? (storeEvent as any).rules
+        : Array.isArray(staticEvent?.rules) && staticEvent.rules.length > 0
+        ? staticEvent.rules
+        : defaultEvent.rules,
+    eligibility:
+      Array.isArray((storeEvent as any)?.eligibility) && (storeEvent as any).eligibility.length > 0
+        ? (storeEvent as any).eligibility
+        : Array.isArray(staticEvent?.eligibility) && staticEvent.eligibility.length > 0
+        ? staticEvent.eligibility
+        : defaultEvent.eligibility,
+    prizes:
+      Array.isArray((storeEvent as any)?.prizes) && (storeEvent as any).prizes.length > 0
+        ? (storeEvent as any).prizes
+        : Array.isArray(staticEvent?.prizes) && staticEvent.prizes.length > 0
+        ? staticEvent.prizes
+        : defaultEvent.prizes,
+    coordinators:
+      Array.isArray((storeEvent as any)?.coordinators) && (storeEvent as any).coordinators.length > 0
+        ? (storeEvent as any).coordinators
+        : Array.isArray(staticEvent?.coordinators) && staticEvent.coordinators.length > 0
+        ? staticEvent.coordinators
+        : defaultEvent.coordinators,
+  };
+
   return (
-    <div className="py-12 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto space-y-8">
+    <div className="py-12 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto space-y-8 w-full max-w-full overflow-x-hidden">
       {/* Back button */}
       <div>
         <Link
@@ -254,6 +300,30 @@ export default function EventDetailPage({ params }: { params: { slug: string } }
             </p>
           </div>
 
+          {/* Event Pictures Gallery (if multiple pictures uploaded) */}
+          {event.images && event.images.length > 1 && (
+            <div className="bg-card rounded-2xl p-6 sm:p-8 border border-fest-gold/30 shadow-sm space-y-4">
+              <h2 className="font-serif text-xl font-bold text-foreground flex items-center">
+                <ImageIcon className="w-5 h-5 mr-2 text-fest-sunset" />
+                Event Gallery &amp; Glimpses ({event.images.length} Pictures)
+              </h2>
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                {event.images.map((img: string, idx: number) => (
+                  <div
+                    key={idx}
+                    className="rounded-xl overflow-hidden aspect-video border border-fest-gold/30 hover:scale-105 transition-transform bg-background"
+                  >
+                    <img
+                      src={img}
+                      alt={`${event.title} photo ${idx + 1}`}
+                      className="w-full h-full object-cover"
+                    />
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
           {/* Rules & Guidelines */}
           <div className="bg-card rounded-2xl p-6 sm:p-8 border border-fest-gold/30 shadow-sm space-y-4">
             <h2 className="font-serif text-xl font-bold text-foreground flex items-center">
@@ -261,7 +331,7 @@ export default function EventDetailPage({ params }: { params: { slug: string } }
               Rules & Guidelines
             </h2>
             <ul className="space-y-3">
-              {event.rules.map((rule: string, i: number) => (
+              {(event.rules || []).map((rule: string, i: number) => (
                 <li key={i} className="flex items-start text-xs sm:text-sm text-foreground/90 font-sans">
                   <span className="inline-block w-5 h-5 rounded-full bg-fest-sunset/15 text-fest-sunset font-bold text-xs flex items-center justify-center mr-3 flex-shrink-0 mt-0.5">
                     {i + 1}
@@ -279,7 +349,7 @@ export default function EventDetailPage({ params }: { params: { slug: string } }
               Eligibility
             </h2>
             <ul className="space-y-2">
-              {event.eligibility.map((item: string, i: number) => (
+              {(event.eligibility || []).map((item: string, i: number) => (
                 <li key={i} className="flex items-center text-xs sm:text-sm text-foreground/90 font-sans">
                   <span className="w-2 h-2 rounded-full bg-fest-sunset mr-3" />
                   <span>{item}</span>
@@ -295,7 +365,7 @@ export default function EventDetailPage({ params }: { params: { slug: string } }
               Prizes & Citations ({event.prizePool})
             </h2>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
-              {event.prizes.map((p: any, i: number) => (
+              {(event.prizes || []).map((p: any, i: number) => (
                 <div
                   key={i}
                   className="p-3.5 rounded-xl bg-fest-champagne/30 dark:bg-fest-charcoal border border-fest-gold/30 flex items-center justify-between"
@@ -380,10 +450,10 @@ export default function EventDetailPage({ params }: { params: { slug: string } }
               <span className="text-xs font-bold text-foreground block font-serif">
                 Student Club Leads ({event.club || "Cultural Council"})
               </span>
-              {event.coordinators.map((c: any, i: number) => (
+              {(event.coordinators || []).map((c: any, i: number) => (
                 <div key={i} className="text-[11px] text-muted-foreground space-y-0.5 font-sans">
                   <p className="font-bold text-foreground">{c.name}</p>
-                  <p>
+                  <p className="break-all sm:break-normal">
                     {c.phone} • {c.email}
                   </p>
                 </div>

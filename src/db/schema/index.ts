@@ -19,14 +19,16 @@ import { relations } from "drizzle-orm";
 // ─── Enums ────────────────────────────────────────────────────────────────────
 
 export const userRoleEnum = pgEnum("user_role", [
+  "admin",
   "super_admin",
+  "student",
+  "participant",
   "event_admin",
   "finance_admin",
   "sports_admin",
   "gallery_admin",
   "event_coordinator",
   "scanner_staff",
-  "participant",
 ]);
 
 export const participationTypeEnum = pgEnum("participation_type", [

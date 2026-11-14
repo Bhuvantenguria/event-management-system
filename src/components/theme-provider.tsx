@@ -17,8 +17,8 @@ type ThemeProviderState = {
 };
 
 const initialState: ThemeProviderState = {
-  theme: "system",
-  resolvedTheme: "light",
+  theme: "dark",
+  resolvedTheme: "dark",
   setTheme: () => null,
 };
 
@@ -26,11 +26,11 @@ const ThemeProviderContext = React.createContext<ThemeProviderState>(initialStat
 
 export function ThemeProvider({
   children,
-  defaultTheme = "light",
-  storageKey = "rangmanch-fest-theme",
+  defaultTheme = "dark",
+  storageKey = "affinity-aiims-theme",
 }: ThemeProviderProps) {
   const [theme, setThemeState] = React.useState<Theme>(defaultTheme);
-  const [resolvedTheme, setResolvedTheme] = React.useState<"dark" | "light">("light");
+  const [resolvedTheme, setResolvedTheme] = React.useState<"dark" | "light">("dark");
 
   React.useEffect(() => {
     try {
@@ -41,6 +41,9 @@ export function ThemeProvider({
         const systemPrefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
         setThemeState("system");
         setResolvedTheme(systemPrefersDark ? "dark" : "light");
+      } else {
+        setThemeState(defaultTheme);
+        setResolvedTheme(defaultTheme === "light" ? "light" : "dark");
       }
     } catch {
       // localStorage may fail in restricted environments
@@ -51,7 +54,7 @@ export function ThemeProvider({
     const root = window.document.documentElement;
     root.classList.remove("light", "dark");
 
-    let computedTheme: "dark" | "light" = "light";
+    let computedTheme: "dark" | "light" = "dark";
     if (theme === "system") {
       computedTheme = window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
     } else {

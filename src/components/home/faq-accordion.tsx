@@ -41,7 +41,7 @@ export function FaqAccordion() {
   const [openIndex, setOpenIndex] = useState<number | null>(0);
 
   return (
-    <section className="py-24 px-4 sm:px-6 lg:px-8 max-w-4xl mx-auto border-t border-border/40">
+    <section className="py-24 px-4 sm:px-6 lg:px-8 max-w-4xl mx-auto border-t border-border/40 overflow-hidden">
       <HeritageDivider
         subtitle="Clarifications & Guidelines"
         title="Frequently Asked Questions"

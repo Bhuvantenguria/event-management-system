@@ -83,7 +83,7 @@ export default function HeritagePage() {
   });
 
   return (
-    <div className="py-12 sm:py-20 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto space-y-12">
+    <div className="py-12 sm:py-20 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto space-y-12 w-full max-w-full overflow-x-hidden">
       {/* Header */}
       <div className="text-center space-y-3 max-w-3xl mx-auto">
         <span className="inline-block text-xs uppercase tracking-[0.25em] font-bold text-fest-sunset font-sans px-3 py-1 rounded-full bg-fest-sunset/10 border border-fest-sunset/20">
@@ -93,12 +93,12 @@ export default function HeritagePage() {
           Uttar Pradesh <span className="sunset-gradient-text">Heritage Collections</span>
         </h1>
         <p className="text-xs sm:text-sm md:text-base text-muted-foreground font-sans">
-          Curated historical narratives, GI-tagged craftsmanship, classical music gharanas, and monumental architecture inspiring Rangmanch UP 2026.
+          Curated historical narratives, GI-tagged craftsmanship, classical music gharanas, and monumental architecture inspiring AffinityAIIMS 2026.
         </p>
       </div>
 
       {/* Category Pills */}
-      <div className="flex items-center justify-center space-x-2 overflow-x-auto pb-2 scrollbar-none">
+      <div className="flex items-center justify-start sm:justify-center space-x-2 overflow-x-auto max-w-full pb-2 scrollbar-none px-2">
         {CATEGORIES.map((cat) => (
           <button
             key={cat}

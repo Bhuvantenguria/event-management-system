@@ -236,7 +236,7 @@ export function SchedulePreview() {
       </div>
 
       {/* Timeline Node Flow */}
-      <div className="relative pl-6 sm:pl-8 border-l-2 border-fest-gold/40 space-y-8 max-w-4xl mx-auto">
+      <div className="relative pl-6 sm:pl-8 border-l-2 border-fest-gold/40 space-y-8 max-w-4xl mx-auto ml-4 sm:mx-auto">
         {currentDay.events.map((evt, idx) => (
           <div key={idx} className="relative group">
             {/* Glowing Timeline Marker Node */}

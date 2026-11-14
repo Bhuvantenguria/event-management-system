@@ -84,7 +84,7 @@ export default function SponsorsPage() {
       {/* Become a Partner CTA */}
       <div className="rounded-2xl bg-card border border-heritage-gold/50 p-8 sm:p-12 text-center max-w-3xl mx-auto space-y-4 shadow-md">
         <h3 className="font-serif text-2xl font-black text-foreground">
-          Partner With Rangmanch UP 2026
+          Partner With AffinityAIIMS 2026
         </h3>
         <p className="text-xs sm:text-sm text-muted-foreground font-sans max-w-xl mx-auto">
           Reach over 5,000+ top collegiate minds and delegates from 60+ universities nationwide.
@@ -92,7 +92,7 @@ export default function SponsorsPage() {
         </p>
         <div className="pt-2 flex flex-col sm:flex-row justify-center gap-3">
           <a
-            href="mailto:sponsors@rangmanchup.in"
+            href="mailto:swar@aiimsraebareli.edu.in"
             className="px-6 py-2.5 rounded-md bg-heritage-maroon text-heritage-ivory text-xs font-bold border border-heritage-gold hover:bg-heritage-maroon-dark transition-colors inline-flex items-center justify-center space-x-2"
           >
             <Mail className="w-4 h-4 text-heritage-gold" />

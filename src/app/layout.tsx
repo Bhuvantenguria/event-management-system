@@ -13,21 +13,22 @@ export const viewport: Viewport = {
 };
 
 export const metadata: Metadata = {
-  title: "Rangmanch '26 | Annual Inter-Collegiate Cultural Fest",
+  title: "AffinityAIIMS | Annual Inter-Collegiate Cultural Fest - AIIMS Raebareli",
   description:
-    "Official portal for Rangmanch 2026: The premier college cultural fest organized by University Cultural Clubs celebrating Indian arts, music, dance, dramatics, and sports championships.",
+    "Official portal for AffinityAIIMS 2026: The premier inter-collegiate cultural fest organized by SWAR & Student Body at AIIMS Raebareli, celebrating arts, music, dance, dramatics, literature, and sports championships.",
   keywords: [
+    "AffinityAIIMS",
+    "AIIMS Raebareli",
+    "SWAR",
     "College Fest",
     "Cultural Clubs",
-    "University Festival",
-    "Rangmanch 2026",
+    "Inter-Collegiate Fest",
     "Dance Club",
     "Dramatics Club",
     "Music Society",
-    "Football Tournament",
-    "Inter-Collegiate Fest",
+    "Sports Arena",
   ],
-  authors: [{ name: "University Cultural Council & Student Body" }],
+  authors: [{ name: "SWAR - AIIMS Raebareli Student Council" }],
 };
 
 export default function RootLayout({
@@ -36,13 +37,13 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" suppressHydrationWarning>
-      <body className="min-h-screen flex flex-col font-sans antialiased selection:bg-fest-sunset selection:text-white">
+    <html lang="en" className="dark overflow-x-hidden max-w-full" suppressHydrationWarning>
+      <body className="min-h-screen flex flex-col font-sans antialiased selection:bg-fest-sunset selection:text-white overflow-x-hidden max-w-full">
         <AuthProvider>
-          <ThemeProvider defaultTheme="light" storageKey="rangmanch-fest-theme">
+          <ThemeProvider defaultTheme="dark" storageKey="affinity-aiims-theme">
             <CustomCursor />
             <Navbar />
-            <main className="flex-1 w-full">{children}</main>
+            <main className="flex-1 w-full max-w-full overflow-x-hidden">{children}</main>
             <Footer />
           </ThemeProvider>
         </AuthProvider>

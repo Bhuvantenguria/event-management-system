@@ -124,7 +124,7 @@ export default function DashboardOverviewPage() {
           </div>
           <Link
             href="/dashboard/payments"
-            className="px-4 py-2 rounded-md bg-heritage-maroon hover:bg-heritage-maroon-dark text-heritage-ivory text-xs font-bold border border-heritage-gold whitespace-nowrap shrink-0"
+            className="w-full sm:w-auto text-center px-4 py-2 rounded-md bg-heritage-maroon hover:bg-heritage-maroon-dark text-heritage-ivory text-xs font-bold border border-heritage-gold shrink-0 transition-colors"
           >
             Submit Payment Proof
           </Link>

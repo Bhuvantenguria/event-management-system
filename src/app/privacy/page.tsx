@@ -15,7 +15,7 @@ export default function PrivacyPage() {
         <section className="space-y-2">
           <h2 className="font-serif text-lg font-bold text-foreground">1. Information We Collect</h2>
           <p>
-            When registering as a participant on Rangmanch UP, we collect your name, college
+            When registering as a participant on AffinityAIIMS, we collect your name, college
             institution, email address, phone number, and student identification details.
             For paid events, we store the payment screenshot and UPI transaction reference (UTR)
             submitted solely for manual financial audit and ticket dispatch.

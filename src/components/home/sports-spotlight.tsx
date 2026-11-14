@@ -7,20 +7,20 @@ import { HeritageDivider } from "@/components/ui/heritage-decorations";
 
 export function SportsSpotlight() {
   return (
-    <section className="py-24 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto border-t border-border/40">
-      <div className="relative rounded-3xl overflow-hidden bg-gradient-to-br from-fest-charcoal via-fest-plum to-fest-burgundy text-fest-champagne p-8 sm:p-12 lg:p-16 border-2 border-fest-gold/40 shadow-2xl">
+    <section className="py-16 sm:py-24 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto border-t border-border/40 overflow-hidden">
+      <div className="relative rounded-3xl overflow-hidden bg-gradient-to-br from-fest-charcoal via-fest-plum to-fest-burgundy text-fest-champagne p-5 sm:p-10 lg:p-14 border-2 border-fest-gold/40 shadow-2xl max-w-full">
         <div className="absolute inset-0 jaali-bg opacity-15 pointer-events-none" />
         <div className="absolute -top-24 -right-24 w-96 h-96 bg-fest-sunset/15 rounded-full blur-3xl pointer-events-none" />
 
-        <div className="relative z-10 grid grid-cols-1 lg:grid-cols-12 gap-10 items-center">
+        <div className="relative z-10 grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-10 items-center">
           {/* Left Column: Tournament Narrative & Highlights */}
-          <div className="lg:col-span-7 space-y-5">
-            <div className="inline-flex items-center space-x-2 px-3.5 py-1.5 rounded-full bg-fest-sunset/20 border border-fest-sunset/50 text-fest-sunset text-xs font-bold uppercase tracking-wider">
-              <Trophy className="w-3.5 h-3.5" />
-              <span>Chhatrapati Shivaji Memorial Trophy 2026</span>
+          <div className="lg:col-span-7 space-y-4 sm:space-y-5">
+            <div className="inline-flex max-w-full items-center space-x-2 px-3 py-1 sm:px-3.5 sm:py-1.5 rounded-full bg-fest-sunset/20 border border-fest-sunset/50 text-fest-sunset text-[10px] sm:text-xs font-bold uppercase tracking-wider">
+              <Trophy className="w-3.5 h-3.5 shrink-0" />
+              <span className="truncate">Chhatrapati Shivaji Memorial Trophy 2026</span>
             </div>
 
-            <h2 className="font-serif text-3xl sm:text-4xl lg:text-5xl font-black leading-tight text-white">
+            <h2 className="font-serif text-2xl sm:text-4xl lg:text-5xl font-black leading-tight text-white break-words">
               The Grand <span className="sunset-gradient-text">Football & Sports</span> Arena
             </h2>
 

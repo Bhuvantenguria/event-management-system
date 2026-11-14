@@ -5,8 +5,8 @@ import Link from "next/link";
 
 export function generateMetadata() {
   return {
-    title: "About the College Fest | Rangmanch '26",
-    description: "Learn about the student cultural clubs, council, and creative vision behind Rangmanch '26 Inter-Collegiate Fest.",
+    title: "About the College Fest | AffinityAIIMS",
+    description: "Learn about the student cultural clubs, council, and creative vision behind AffinityAIIMS Inter-Collegiate Fest.",
   };
 }
 
@@ -19,7 +19,7 @@ export default function AboutPage() {
           The Student Societies Behind The Movement
         </span>
         <h1 className="font-serif text-4xl sm:text-5xl lg:text-6xl font-black text-foreground">
-          The Story of <span className="sunset-gradient-text">रंगमंच &apos;26</span>
+          The Story of <span className="sunset-gradient-text">AffinityAIIMS</span>
         </h1>
         <p className="text-muted-foreground text-sm sm:text-base leading-relaxed font-sans">
           A flagship inter-collegiate cultural fest organized by our university&apos;s student cultural clubs to celebrate India&apos;s classical heritage, contemporary collegiate arts, and fierce tournament rivalries.

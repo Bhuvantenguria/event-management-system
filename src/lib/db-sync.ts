@@ -4,6 +4,8 @@ import {
   StoredRegistration,
   StoredPaymentSubmission,
   StoredTicket,
+  StoredEvent,
+  StoredGalleryItem,
 } from "./data-store";
 import {
   getDatabase,
@@ -11,6 +13,8 @@ import {
   getRegistrationsCollection,
   getPaymentsCollection,
   getTicketsCollection,
+  getEventsCollection,
+  getGalleryCollection,
   getQrSettingsCollection,
 } from "./mongodb";
 
@@ -18,12 +22,16 @@ let isInitialized = false;
 let isSyncing = false;
 
 // Register persistence handler with dataStore so all writes automatically update MongoDB Atlas
-dataStore.setPersistenceHandler(async (collection, filter, data) => {
+dataStore.setPersistenceHandler(async (collection, filter, data, action = "upsert") => {
   if (!process.env.MONGODB_URI) return;
   try {
     const db = await getDatabase();
     if (!db) return;
-    await db.collection(collection).updateOne(filter, { $set: data }, { upsert: true });
+    if (action === "delete") {
+      await db.collection(collection).deleteOne(filter);
+    } else {
+      await db.collection(collection).updateOne(filter, { $set: data }, { upsert: true });
+    }
   } catch (err) {
     console.error(`MongoDB persistence error for ${collection}:`, err);
   }
@@ -110,6 +118,32 @@ export async function syncWithMongo(): Promise<void> {
           { $set: { id: "global_qr_settings", ...dataStore.getQrSettings() } },
           { upsert: true }
         );
+      }
+    }
+
+    // 6. Sync Events
+    const eventsCol = await getEventsCollection();
+    if (eventsCol) {
+      const dbEvents = (await eventsCol.find({}, { projection: { _id: 0 } }).toArray()) as unknown as StoredEvent[];
+      if (dbEvents.length > 0) {
+        dataStore.loadEventsFromMongo(dbEvents);
+      } else {
+        for (const ev of dataStore.getAllEvents()) {
+          await eventsCol.updateOne({ id: ev.id }, { $set: ev }, { upsert: true });
+        }
+      }
+    }
+
+    // 7. Sync Gallery
+    const galleryCol = await getGalleryCollection();
+    if (galleryCol) {
+      const dbGallery = (await galleryCol.find({}, { projection: { _id: 0 } }).toArray()) as unknown as StoredGalleryItem[];
+      if (dbGallery.length > 0) {
+        dataStore.loadGalleryFromMongo(dbGallery);
+      } else {
+        for (const g of dataStore.getAllGalleryItems()) {
+          await galleryCol.updateOne({ id: g.id }, { $set: g }, { upsert: true });
+        }
       }
     }
 

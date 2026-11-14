@@ -106,49 +106,55 @@ export function HeroSection() {
       </div>
 
       {/* Main Campaign Hero Content */}
-      <div className="relative z-10 max-w-5xl mx-auto flex flex-col items-center">
+      <div className="relative z-10 max-w-5xl mx-auto flex flex-col items-center w-full px-2 sm:px-0">
         {/* Collegiate Fest Badge */}
-        <div className="inline-flex items-center space-x-2.5 px-4 py-1.5 rounded-full bg-fest-plum/85 border border-fest-sunset/60 text-fest-champagne backdrop-blur-md mb-6 shadow-lg group hover:border-fest-sunset transition-colors">
-          <Zap className="w-4 h-4 text-fest-sunset animate-pulse" />
-          <span className="text-xs sm:text-sm font-sans tracking-wider font-extrabold text-fest-gold-light uppercase">
-            Annual Inter-Collegiate Cultural Fest • Powered by College Clubs
+        <div className="inline-flex max-w-full flex-wrap items-center justify-center gap-1.5 sm:gap-2.5 px-3 sm:px-4 py-1.5 rounded-full bg-fest-plum/90 border border-fest-sunset/60 text-fest-champagne backdrop-blur-md mb-5 sm:mb-6 shadow-lg group hover:border-fest-sunset transition-colors text-center">
+          <div className="flex items-center space-x-1.5">
+            <Zap className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-fest-sunset animate-pulse shrink-0" />
+            <span className="text-[10px] sm:text-xs md:text-sm font-sans tracking-wide sm:tracking-wider font-extrabold text-fest-gold-light uppercase">
+              Annual Inter-Collegiate Cultural Fest
+            </span>
+          </div>
+          <span className="hidden sm:inline text-fest-gold/50">•</span>
+          <span className="text-[10px] sm:text-xs font-sans text-fest-sunset font-extrabold tracking-wide uppercase">
+            Powered by College Clubs
           </span>
-          <span className="text-fest-gold/50">|</span>
-          <span className="text-xs font-sans text-white font-bold tracking-wide">
+          <span className="hidden sm:inline text-fest-gold/50">|</span>
+          <span className="text-[10px] sm:text-xs font-sans text-white font-bold tracking-wide">
             12–15 March 2026
           </span>
         </div>
 
         {/* Festival Grand Campaign Title with Overlapping Editorial Treatment */}
-        <div className="relative mb-3">
-          <span className="text-xs sm:text-sm uppercase tracking-[0.35em] font-sans font-black text-fest-sunset block mb-2 drop-shadow-sm">
-            60+ Universities • 7 Student Societies • 1 Rolling Trophy
+        <div className="relative mb-3 max-w-full px-1 sm:px-2">
+          <span className="text-[10px] sm:text-xs md:text-sm uppercase tracking-wider sm:tracking-[0.25em] font-sans font-black text-fest-sunset block mb-2 drop-shadow-sm break-words max-w-full">
+            AIIMS Raebareli • 60+ Collegiate Delegations • 1 Grand Trophy
           </span>
-          <h1 className="font-serif text-5xl sm:text-7xl md:text-8xl lg:text-9xl font-black text-white tracking-tight leading-none drop-shadow-2xl">
-            रंगमंच <span className="sunset-gradient-text">&apos;26 Fest</span>
+          <h1 className="font-serif text-4xl sm:text-6xl md:text-8xl lg:text-9xl font-black text-white tracking-tight leading-none drop-shadow-2xl break-words max-w-full">
+            Affinity<span className="sunset-gradient-text">AIIMS</span>
           </h1>
         </div>
 
         {/* Festival Tagline */}
-        <p className="font-serif text-lg sm:text-2xl md:text-3xl text-fest-gold-light font-normal italic max-w-3xl mx-auto mb-3 drop-shadow">
-          “Where University Cultural Societies, Awadhi Heritage & Youth Energy Converge”
+        <p className="font-serif text-base sm:text-xl md:text-3xl text-fest-gold-light font-normal italic max-w-3xl mx-auto mb-3 drop-shadow px-2">
+          “Where Healthcare Leaders, Cultural Heritage & Youth Energy Converge”
         </p>
 
-        <p className="text-xs sm:text-sm md:text-base text-fest-champagne/90 font-sans max-w-2xl mx-auto mb-6 leading-relaxed">
-          Four extraordinary days organized by our university clubs spanning Kathak & street theatre battles,
+        <p className="text-xs sm:text-sm md:text-base text-fest-champagne/90 font-sans max-w-2xl mx-auto mb-5 sm:mb-6 leading-relaxed px-2">
+          Four extraordinary days hosted by AIIMS Raebareli student societies spanning Kathak & street theatre battles,
           Sufi rock bands, parliamentary debates, 3D handicraft hackathons, and varsity football championships.
         </p>
 
         {/* Live Countdown Timer */}
-        <div className="w-full max-w-lg mx-auto">
+        <div className="w-full max-w-lg mx-auto overflow-hidden">
           <CountdownTimer targetDate="2026-03-12T09:00:00" />
         </div>
 
         {/* Action CTAs */}
-        <div className="flex flex-col sm:flex-row items-center justify-center gap-4 mt-2 w-full sm:w-auto">
+        <div className="flex flex-col sm:flex-row items-center justify-center gap-3 sm:gap-4 mt-2 w-full sm:w-auto px-4 sm:px-0">
           <Link
             href="/register"
-            className="w-full sm:w-auto px-8 py-4 rounded-2xl font-sans text-sm font-bold bg-gradient-to-r from-fest-sunset via-orange-500 to-fest-burgundy text-white hover:brightness-110 shadow-2xl transition-all duration-300 transform hover:-translate-y-0.5 flex items-center justify-center space-x-2.5 group border border-fest-gold/40 glow-sunset"
+            className="w-full sm:w-auto px-6 sm:px-8 py-3.5 sm:py-4 rounded-2xl font-sans text-xs sm:text-sm font-bold bg-gradient-to-r from-fest-sunset via-orange-500 to-fest-burgundy text-white hover:brightness-110 shadow-2xl transition-all duration-300 transform hover:-translate-y-0.5 flex items-center justify-center space-x-2.5 group border border-fest-gold/40 glow-sunset text-center"
           >
             <span>Get Fest Entry Pass</span>
             <ArrowRight className="w-4 h-4 group-hover:translate-x-1.5 transition-transform" />
@@ -156,7 +162,7 @@ export function HeroSection() {
 
           <Link
             href="/events"
-            className="w-full sm:w-auto px-8 py-4 rounded-2xl font-sans text-sm font-bold bg-fest-plum/85 hover:bg-fest-plum text-fest-champagne border border-fest-gold/60 shadow-xl backdrop-blur-md transition-all duration-300 transform hover:-translate-y-0.5 flex items-center justify-center space-x-2 group hover:border-fest-sunset"
+            className="w-full sm:w-auto px-6 sm:px-8 py-3.5 sm:py-4 rounded-2xl font-sans text-xs sm:text-sm font-bold bg-fest-plum/85 hover:bg-fest-plum text-fest-champagne border border-fest-gold/60 shadow-xl backdrop-blur-md transition-all duration-300 transform hover:-translate-y-0.5 flex items-center justify-center space-x-2 group hover:border-fest-sunset text-center"
           >
             <Sparkles className="w-4 h-4 text-fest-gold group-hover:rotate-12 transition-transform" />
             <span>Explore 40+ Club Contests</span>
@@ -164,43 +170,43 @@ export function HeroSection() {
         </div>
 
         {/* Quick Highlights Bar */}
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-6 mt-12 w-full max-w-4xl mx-auto pt-8 border-t border-fest-gold/30 text-white">
-          <div className="flex flex-col items-center p-4 rounded-2xl bg-fest-charcoal/70 backdrop-blur-md border border-fest-gold/25 hover:border-fest-sunset transition-colors">
-            <Trophy className="w-5 h-5 text-fest-sunset mb-1.5" />
-            <span className="text-xl sm:text-2xl font-serif font-black text-fest-gold-light">
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 sm:gap-6 mt-10 sm:mt-12 w-full max-w-4xl mx-auto pt-6 sm:pt-8 border-t border-fest-gold/30 text-white">
+          <div className="flex flex-col items-center p-3 sm:p-4 rounded-xl sm:rounded-2xl bg-fest-charcoal/70 backdrop-blur-md border border-fest-gold/25 hover:border-fest-sunset transition-colors text-center">
+            <Trophy className="w-4 h-4 sm:w-5 sm:h-5 text-fest-sunset mb-1" />
+            <span className="text-lg sm:text-2xl font-serif font-black text-fest-gold-light">
               ₹5,00,000+
             </span>
-            <span className="text-[10px] text-fest-champagne/70 uppercase tracking-widest font-sans font-bold">
+            <span className="text-[9px] sm:text-[10px] text-fest-champagne/70 uppercase tracking-wider font-sans font-bold">
               Prize Pool
             </span>
           </div>
 
-          <div className="flex flex-col items-center p-4 rounded-2xl bg-fest-charcoal/70 backdrop-blur-md border border-fest-gold/25 hover:border-fest-sunset transition-colors">
-            <Sparkles className="w-5 h-5 text-fest-sunset mb-1.5" />
-            <span className="text-xl sm:text-2xl font-serif font-black text-fest-gold-light">
+          <div className="flex flex-col items-center p-3 sm:p-4 rounded-xl sm:rounded-2xl bg-fest-charcoal/70 backdrop-blur-md border border-fest-gold/25 hover:border-fest-sunset transition-colors text-center">
+            <Sparkles className="w-4 h-4 sm:w-5 sm:h-5 text-fest-sunset mb-1" />
+            <span className="text-lg sm:text-2xl font-serif font-black text-fest-gold-light">
               45+
             </span>
-            <span className="text-[10px] text-fest-champagne/70 uppercase tracking-widest font-sans font-bold">
+            <span className="text-[9px] sm:text-[10px] text-fest-champagne/70 uppercase tracking-wider font-sans font-bold">
               Club Competitions
             </span>
           </div>
 
-          <div className="flex flex-col items-center p-4 rounded-2xl bg-fest-charcoal/70 backdrop-blur-md border border-fest-gold/25 hover:border-fest-sunset transition-colors">
-            <Users className="w-5 h-5 text-fest-sunset mb-1.5" />
-            <span className="text-xl sm:text-2xl font-serif font-black text-fest-gold-light">
+          <div className="flex flex-col items-center p-3 sm:p-4 rounded-xl sm:rounded-2xl bg-fest-charcoal/70 backdrop-blur-md border border-fest-gold/25 hover:border-fest-sunset transition-colors text-center">
+            <Users className="w-4 h-4 sm:w-5 sm:h-5 text-fest-sunset mb-1" />
+            <span className="text-lg sm:text-2xl font-serif font-black text-fest-gold-light">
               60+ Colleges
             </span>
-            <span className="text-[10px] text-fest-champagne/70 uppercase tracking-widest font-sans font-bold">
+            <span className="text-[9px] sm:text-[10px] text-fest-champagne/70 uppercase tracking-wider font-sans font-bold">
               Pan-India Contingents
             </span>
           </div>
 
-          <div className="flex flex-col items-center p-4 rounded-2xl bg-fest-charcoal/70 backdrop-blur-md border border-fest-gold/25 hover:border-fest-sunset transition-colors">
-            <MapPin className="w-5 h-5 text-fest-sunset mb-1.5" />
-            <span className="text-xl sm:text-2xl font-serif font-black text-fest-gold-light">
+          <div className="flex flex-col items-center p-3 sm:p-4 rounded-xl sm:rounded-2xl bg-fest-charcoal/70 backdrop-blur-md border border-fest-gold/25 hover:border-fest-sunset transition-colors text-center">
+            <MapPin className="w-4 h-4 sm:w-5 sm:h-5 text-fest-sunset mb-1" />
+            <span className="text-lg sm:text-2xl font-serif font-black text-fest-gold-light">
               4 Days
             </span>
-            <span className="text-[10px] text-fest-champagne/70 uppercase tracking-widest font-sans font-bold">
+            <span className="text-[9px] sm:text-[10px] text-fest-champagne/70 uppercase tracking-wider font-sans font-bold">
               Mega Campus Confluence
             </span>
           </div>

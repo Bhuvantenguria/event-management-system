@@ -119,7 +119,7 @@ export default function SportsArenaPage() {
   const [activeTab, setActiveTab] = useState<"fixtures" | "standings" | "bracket">("fixtures");
 
   return (
-    <div className="py-12 sm:py-20 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto space-y-12">
+    <div className="py-12 sm:py-20 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto space-y-12 w-full max-w-full overflow-x-hidden">
       {/* Header */}
       <div className="text-center space-y-3 max-w-3xl mx-auto">
         <span className="inline-block text-xs uppercase tracking-[0.25em] font-bold text-fest-sunset font-sans px-3 py-1 rounded-full bg-fest-sunset/10 border border-fest-sunset/20">
@@ -316,7 +316,7 @@ export default function SportsArenaPage() {
 
       {/* Tab Content: Bracket */}
       {activeTab === "bracket" && (
-        <div className="max-w-4xl mx-auto bg-card rounded-2xl border border-fest-gold/30 p-8 shadow-sm">
+        <div className="max-w-4xl mx-auto bg-card rounded-2xl border border-fest-gold/30 p-4 sm:p-8 shadow-sm overflow-hidden">
           <h3 className="font-serif font-bold text-xl text-foreground text-center mb-6">
             Championship Knockout Tree
           </h3>

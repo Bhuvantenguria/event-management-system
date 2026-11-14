@@ -68,5 +68,5 @@ export const authOptions: NextAuthOptions = {
       return session;
     },
   },
-  secret: process.env.NEXTAUTH_SECRET || "rangmanch-up-heritage-secret-key-2026-prod",
+  secret: process.env.NEXTAUTH_SECRET || "affinity-aiims-secret-key-2026-prod",
 };

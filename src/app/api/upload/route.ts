@@ -20,7 +20,7 @@ export async function POST(req: NextRequest) {
     if (contentType.includes("multipart/form-data")) {
       const formData = await req.formData();
       const file = formData.get("file") as File | null;
-      const folder = (formData.get("folder") as string) || "rangmanch26/payments";
+      const folder = (formData.get("folder") as string) || "affinity_aiims/payments";
 
       if (!file) {
         return NextResponse.json(
@@ -59,7 +59,7 @@ export async function POST(req: NextRequest) {
 
     // 2. Handle JSON payload with base64 data URL
     const body = await req.json();
-    const { image, folder = "rangmanch26/payments" } = body;
+    const { image, folder = "affinity_aiims/payments" } = body;
 
     if (!image || typeof image !== "string") {
       return NextResponse.json(

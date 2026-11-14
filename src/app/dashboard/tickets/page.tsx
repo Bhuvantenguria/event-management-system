@@ -89,14 +89,14 @@ export default function DigitalTicketsPage() {
               className="relative rounded-2xl overflow-hidden bg-card border-2 border-heritage-gold shadow-2xl transition-all"
             >
               {/* Royal Arch Top Accent Banner */}
-              <div className="bg-heritage-maroon text-heritage-ivory px-6 py-4 border-b border-heritage-gold flex items-center justify-between">
+              <div className="bg-heritage-maroon text-heritage-ivory px-4 sm:px-6 py-3 sm:py-4 border-b border-heritage-gold flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
                 <div className="flex items-center space-x-2.5">
-                  <div className="w-8 h-8 rounded-full bg-heritage-charcoal flex items-center justify-center border border-heritage-gold">
+                  <div className="w-8 h-8 rounded-full bg-heritage-charcoal flex items-center justify-center border border-heritage-gold shrink-0">
                     <LotusOrnament className="w-4 h-4 text-heritage-gold" />
                   </div>
                   <div>
                     <span className="font-serif text-base font-bold text-heritage-gold-light">
-                      रंगमंच UP 2026
+                      AffinityAIIMS 2026
                     </span>
                     <span className="text-[10px] uppercase tracking-widest text-heritage-sandstone block font-sans">
                       Official Entry Pass • 12–15 March 2026
@@ -104,7 +104,7 @@ export default function DigitalTicketsPage() {
                   </div>
                 </div>
 
-                <div className="text-right">
+                <div className="text-left sm:text-right">
                   <span className="text-[10px] uppercase font-sans text-heritage-sandstone block">
                     Ticket ID
                   </span>
@@ -201,7 +201,7 @@ export default function DigitalTicketsPage() {
               </div>
 
               {/* Bottom Cutout Line */}
-              <div className="px-6 py-2.5 bg-muted/50 border-t border-border flex items-center justify-between text-[11px] text-muted-foreground font-sans">
+              <div className="px-4 sm:px-6 py-2.5 bg-muted/50 border-t border-border flex flex-col sm:flex-row items-start sm:items-center justify-between gap-1 text-[11px] text-muted-foreground font-sans">
                 <span>Registration Ref: {t.registrationId}</span>
                 <span>Carry valid Student ID card alongside this QR ticket.</span>
               </div>

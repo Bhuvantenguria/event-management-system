@@ -59,7 +59,7 @@ export default function ParticipantPaymentsPage() {
     try {
       const formData = new FormData();
       formData.append("file", file);
-      formData.append("folder", "rangmanch26/payments");
+      formData.append("folder", "affinity_aiims/payments");
 
       const res = await fetch("/api/upload", {
         method: "POST",
@@ -190,7 +190,7 @@ export default function ParticipantPaymentsPage() {
   };
 
   return (
-    <div className="space-y-8 max-w-6xl mx-auto">
+    <div className="space-y-8 max-w-6xl mx-auto w-full max-w-full overflow-x-hidden">
       <div className="border-b border-border pb-4">
         <h1 className="font-serif text-2xl sm:text-3xl font-black text-foreground">
           Manual Paytm QR <span className="gold-gradient-text">Payment Verification</span>

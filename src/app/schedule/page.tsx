@@ -194,7 +194,7 @@ const SCHEDULE_DATA = [
     title: "Bollywood & Sufi Headline Star Night",
     category: "Celebrity",
     venue: "Grand Open Stadium",
-    description: "Sensational live musical concert bringing Rangmanch UP 2026 to a magnificent finale.",
+    description: "Sensational live musical concert bringing AffinityAIIMS 2026 to a magnificent finale.",
   },
 ];
 
@@ -212,7 +212,7 @@ export default function FestivalSchedulePage() {
   });
 
   return (
-    <div className="py-12 sm:py-20 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto space-y-12">
+    <div className="py-12 sm:py-20 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto space-y-12 w-full max-w-full overflow-x-hidden">
       {/* Header */}
       <div className="text-center space-y-3 max-w-3xl mx-auto">
         <span className="inline-block text-xs uppercase tracking-[0.25em] font-bold text-fest-sunset font-sans px-3 py-1 rounded-full bg-fest-sunset/10 border border-fest-sunset/20">
@@ -259,7 +259,7 @@ export default function FestivalSchedulePage() {
       </div>
 
       {/* Category Pills */}
-      <div className="flex items-center justify-center space-x-2 overflow-x-auto pb-1 scrollbar-none">
+      <div className="flex items-center justify-start sm:justify-center space-x-2 overflow-x-auto max-w-full pb-1 scrollbar-none px-2">
         {categories.map((c) => (
           <button
             key={c}
@@ -276,7 +276,7 @@ export default function FestivalSchedulePage() {
       </div>
 
       {/* Timeline Events List */}
-      <div className="relative pl-6 sm:pl-8 border-l-2 border-fest-gold/40 space-y-8 max-w-4xl mx-auto">
+      <div className="relative pl-6 sm:pl-8 border-l-2 border-fest-gold/40 space-y-8 max-w-4xl ml-4 sm:mx-auto">
         {filteredEvents.map((item) => (
           <div key={item.id} className="relative group">
             {/* Glowing Timeline Marker */}

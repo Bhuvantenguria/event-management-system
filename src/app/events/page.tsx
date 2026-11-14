@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import {
   Search,
@@ -13,6 +13,7 @@ import {
   Sparkles,
 } from "lucide-react";
 import { SAMPLE_FEATURED_EVENTS, SAMPLE_CATEGORIES } from "@/components/home/featured-events";
+import { dataStore } from "@/lib/data-store";
 import { formatCurrency } from "@/lib/utils";
 
 // Comprehensive events list spanning all categories
@@ -119,8 +120,26 @@ export default function EventsCatalogPage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("all");
   const [feeFilter, setFeeFilter] = useState("all"); // 'all' | 'free' | 'paid'
+  const [eventsList, setEventsList] = useState<any[]>(ALL_EVENTS);
 
-  const filteredEvents = ALL_EVENTS.filter((event) => {
+  useEffect(() => {
+    const storeEvents = dataStore.getAllEvents();
+    const map = new Map<string, any>();
+    // Preload all store events first so newly created events appear
+    for (const ev of storeEvents) {
+      map.set(ev.slug || ev.id, ev);
+    }
+    // Merge fallback static events if not already existing
+    for (const ev of ALL_EVENTS) {
+      const key = ev.slug || ev.id;
+      if (!map.has(key)) {
+        map.set(key, ev);
+      }
+    }
+    setEventsList(Array.from(map.values()));
+  }, []);
+
+  const filteredEvents = eventsList.filter((event) => {
     const matchesSearch =
       event.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
       event.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -170,7 +189,7 @@ export default function EventsCatalogPage() {
           </div>
 
           {/* Fee Filter */}
-          <div className="flex items-center space-x-2 w-full sm:w-auto justify-end">
+          <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto justify-start sm:justify-end">
             <span className="text-xs text-muted-foreground font-sans font-semibold">Fee:</span>
             {["all", "paid", "free"].map((filter) => (
               <button
@@ -189,7 +208,7 @@ export default function EventsCatalogPage() {
         </div>
 
         {/* Category Filter Pills */}
-        <div className="flex items-center space-x-2 overflow-x-auto pb-2 scrollbar-none">
+        <div className="flex items-center space-x-2 overflow-x-auto max-w-full pb-2 scrollbar-none">
           {SAMPLE_CATEGORIES.map((cat) => {
             const isSelected = selectedCategory === cat.id;
             return (

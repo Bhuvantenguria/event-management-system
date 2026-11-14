@@ -15,8 +15,8 @@ export async function POST(request: Request) {
   const session = await getServerSession(authOptions);
   const role = (session?.user as any)?.role;
 
-  if (!hasRole(role, ["super_admin", "finance_admin"])) {
-    return NextResponse.json({ error: "Forbidden: Finance Admin privilege required." }, { status: 403 });
+  if (!hasRole(role, ["admin", "super_admin"])) {
+    return NextResponse.json({ error: "Forbidden: Administrator privilege required." }, { status: 403 });
   }
 
   try {

@@ -15,7 +15,7 @@ import { FaqAccordion } from "@/components/home/faq-accordion";
 
 export default function HomePage() {
   return (
-    <div className="flex flex-col min-h-screen">
+    <div className="flex flex-col min-h-screen w-full max-w-full overflow-x-hidden">
       {/* 1. Announcements – Campus Live Bulletin */}
       <AnnouncementsBanner />
 

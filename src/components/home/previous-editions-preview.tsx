@@ -46,14 +46,14 @@ const EDITIONS = [
 
 export function PreviousEditionsPreview() {
   return (
-    <section className="py-24 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto border-t border-border/40">
+    <section className="py-24 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto border-t border-border/40 overflow-hidden">
       <HeritageDivider
         subtitle="Legacy & Heritage Archives"
         title="Cinematic Chronicles: Past Editions"
       />
 
       <p className="text-center text-sm md:text-base text-muted-foreground max-w-2xl mx-auto -mt-4 mb-12 font-sans">
-        Explore three years of unforgettable moments, triumphant championships, and transcendent musical evenings that laid the foundation for Rangmanch UP 2026.
+        Explore three years of unforgettable moments, triumphant championships, and transcendent musical evenings that laid the foundation for AffinityAIIMS 2026.
       </p>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
@@ -134,13 +134,13 @@ export function PreviousEditionsPreview() {
         ))}
       </div>
 
-      <div className="mt-14 text-center">
+      <div className="mt-14 text-center px-2">
         <Link
           href="/previous-editions"
-          className="inline-flex items-center space-x-2 px-8 py-3.5 rounded-xl border border-fest-gold hover:border-fest-sunset bg-card hover:bg-fest-sunset/10 text-sm font-bold text-foreground transition-all shadow-sm"
+          className="inline-flex max-w-full items-center justify-center space-x-2 px-4 sm:px-8 py-3.5 rounded-xl border border-fest-gold hover:border-fest-sunset bg-card hover:bg-fest-sunset/10 text-xs sm:text-sm font-bold text-foreground transition-all shadow-sm text-center"
         >
-          <span>Explore Complete Hall of Fame & Historical Editions</span>
-          <ArrowRight className="w-4 h-4 text-fest-sunset" />
+          <span className="break-words">Explore Complete Hall of Fame &amp; Historical Editions</span>
+          <ArrowRight className="w-4 h-4 text-fest-sunset shrink-0" />
         </Link>
       </div>
     </section>

@@ -66,7 +66,7 @@ export function GalleryPreview() {
   const [selectedImage, setSelectedImage] = useState<(typeof GALLERY_SAMPLES)[0] | null>(null);
 
   return (
-    <section className="py-24 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto border-t border-border/40">
+    <section className="py-24 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto border-t border-border/40 overflow-hidden">
       <HeritageDivider
         subtitle="Visual Chronicles & Moments"
         title="Glimpses of Grandeur"
@@ -150,14 +150,14 @@ export function GalleryPreview() {
         </div>
       )}
 
-      <div className="mt-14 text-center">
+      <div className="mt-14 text-center px-2">
         <Link
           href="/gallery"
-          className="inline-flex items-center space-x-2 px-8 py-3.5 rounded-xl border border-fest-gold hover:border-fest-sunset bg-card hover:bg-fest-sunset/10 text-sm font-bold text-foreground transition-all shadow-sm"
+          className="inline-flex max-w-full items-center justify-center space-x-2 px-4 sm:px-8 py-3.5 rounded-xl border border-fest-gold hover:border-fest-sunset bg-card hover:bg-fest-sunset/10 text-xs sm:text-sm font-bold text-foreground transition-all shadow-sm text-center"
         >
-          <ImageIcon className="w-4 h-4 text-fest-sunset" />
-          <span>View Complete 200+ Photo & Video Fest Gallery</span>
-          <ArrowRight className="w-4 h-4 text-fest-sunset" />
+          <ImageIcon className="w-4 h-4 text-fest-sunset shrink-0" />
+          <span className="break-words">View Complete 200+ Photo &amp; Video Fest Gallery</span>
+          <ArrowRight className="w-4 h-4 text-fest-sunset shrink-0" />
         </Link>
       </div>
     </section>

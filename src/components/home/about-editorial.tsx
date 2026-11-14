@@ -7,7 +7,7 @@ import { HeritageDivider } from "@/components/ui/heritage-decorations";
 
 export function AboutEditorial() {
   return (
-    <section id="homepage-about" className="py-24 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto relative">
+    <section id="homepage-about" className="py-20 sm:py-24 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto relative overflow-hidden">
       <div className="absolute top-1/2 left-0 -translate-y-1/2 w-72 h-72 bg-fest-sunset/10 rounded-full blur-3xl pointer-events-none" />
       <div className="absolute bottom-0 right-0 w-80 h-80 bg-fest-burgundy/10 rounded-full blur-3xl pointer-events-none" />
 
@@ -74,7 +74,7 @@ export function AboutEditorial() {
           </div>
 
           <p className="text-sm sm:text-base text-muted-foreground leading-relaxed font-sans">
-            <strong className="text-foreground">रंगमंच &apos;26</strong> is the annual flagship inter-collegiate cultural fest organized by the <strong className="text-foreground">University Cultural Council</strong> and our seven constituent student societies. Instead of dry templates, we wanted a platform that captures the real thrill of college festivals: high-stakes club rivalries, midnight jam sessions, auditorium standing ovations, and fierce varsity sports showdowns.
+            <strong className="text-foreground">AffinityAIIMS</strong> is the annual flagship inter-collegiate cultural fest organized by <strong className="text-foreground">SWAR (Student Welfare Association of AIIMS Raebareli)</strong> and our student societies. Instead of dry templates, we created a platform that captures the real thrill of college festivals: high-stakes club rivalries, midnight jam sessions, auditorium standing ovations, and fierce varsity sports showdowns.
           </p>
 
           <p className="text-sm sm:text-base text-muted-foreground leading-relaxed font-sans">

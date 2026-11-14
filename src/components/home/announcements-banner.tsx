@@ -10,7 +10,7 @@ export function AnnouncementsBanner() {
   if (!isVisible) return null;
 
   return (
-    <div className="relative w-full bg-gradient-to-r from-fest-charcoal via-fest-burgundy to-fest-plum text-fest-champagne py-2 px-4 border-b border-fest-gold/30 shadow-sm z-30">
+    <div className="relative w-full max-w-full overflow-hidden bg-gradient-to-r from-fest-charcoal via-fest-burgundy to-fest-plum text-fest-champagne py-2 px-3 sm:px-4 border-b border-fest-gold/30 shadow-sm z-30">
       <div className="max-w-7xl mx-auto flex items-center justify-between text-xs font-sans gap-3">
         <div className="flex items-center space-x-2.5 overflow-hidden">
           <span className="flex-shrink-0 px-2.5 py-0.5 rounded-full bg-gradient-to-r from-fest-sunset to-fest-burgundy text-white font-black text-[10px] uppercase tracking-wider flex items-center shadow-sm">

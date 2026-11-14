@@ -31,7 +31,7 @@ const NAV_LINKS = [
   { name: "Cultural Arts", href: "/heritage" },
   { name: "Past Editions", href: "/previous-editions" },
   { name: "Gallery", href: "/gallery" },
-  { name: "About Fest", href: "/about" },
+  { name: "About", href: "/about" },
 ];
 
 export function Navbar() {
@@ -42,47 +42,37 @@ export function Navbar() {
 
   const user = session?.user;
   const role = (user as { role?: string })?.role;
-  const isAdminOrStaff =
-    role &&
-    [
-      "super_admin",
-      "event_admin",
-      "finance_admin",
-      "sports_admin",
-      "gallery_admin",
-      "event_coordinator",
-      "scanner_staff",
-    ].includes(role);
+  const isAdmin = role && ["admin", "super_admin"].includes(role);
 
   return (
-    <header className="sticky top-0 z-50 w-full transition-all duration-300 px-3 sm:px-6 lg:px-8 py-3">
+    <header className="sticky top-0 z-50 w-full max-w-full transition-all duration-300 px-2 sm:px-6 lg:px-8 py-2.5 sm:py-3">
       {/* Modern Floating Island Glassmorphism Nav Container */}
-      <div className="max-w-7xl mx-auto rounded-2xl bg-card/85 dark:bg-fest-charcoal/85 backdrop-blur-xl border border-fest-gold/30 shadow-xl px-4 sm:px-6 py-2.5 transition-all">
-        <div className="flex items-center justify-between h-14 sm:h-16">
+      <div className="max-w-7xl mx-auto rounded-2xl bg-card/90 dark:bg-fest-charcoal/90 backdrop-blur-xl border border-fest-gold/30 shadow-xl px-3 sm:px-6 py-2 sm:py-2.5 transition-all">
+        <div className="flex items-center justify-between h-14 sm:h-16 gap-2">
           {/* Modern College Fest Brand Logo */}
-          <Link href="/" className="flex items-center space-x-3 group">
-            <div className="relative w-10 h-10 rounded-xl bg-gradient-to-tr from-fest-sunset via-orange-500 to-fest-burgundy flex items-center justify-center text-white shadow-md shadow-fest-sunset/30 group-hover:scale-105 group-hover:rotate-3 transition-all duration-300">
-              <Flame className="w-5 h-5 text-fest-champagne animate-pulse" />
+          <Link href="/" className="flex items-center space-x-2 sm:space-x-3 group min-w-0">
+            <div className="relative w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-gradient-to-tr from-fest-sunset via-orange-500 to-fest-burgundy flex items-center justify-center text-white shadow-md shadow-fest-sunset/30 group-hover:scale-105 transition-all duration-300 shrink-0">
+              <Flame className="w-4 h-4 sm:w-5 sm:h-5 text-fest-champagne animate-pulse" />
               <div className="absolute -top-1 -right-1 w-2.5 h-2.5 rounded-full bg-fest-gold border-2 border-background" />
             </div>
 
-            <div className="flex flex-col">
+            <div className="flex flex-col min-w-0">
               <div className="flex items-center space-x-1.5">
-                <span className="font-serif text-xl sm:text-2xl font-black tracking-tight text-foreground group-hover:text-fest-sunset transition-colors">
-                  रंगमंच
+                <span className="font-serif text-lg sm:text-2xl font-black tracking-tight text-foreground group-hover:text-fest-sunset transition-colors truncate">
+                  Affinity<span className="text-fest-sunset">AIIMS</span>
                 </span>
-                <span className="text-[11px] font-sans font-black px-2 py-0.5 rounded-md bg-fest-sunset/15 text-fest-sunset border border-fest-sunset/30 uppercase tracking-wider">
+                <span className="text-[10px] sm:text-[11px] font-sans font-black px-1.5 sm:px-2 py-0.5 rounded-md bg-fest-sunset/15 text-fest-sunset border border-fest-sunset/30 uppercase tracking-wider shrink-0">
                   &apos;26 Fest
                 </span>
               </div>
-              <span className="text-[9px] sm:text-[10px] uppercase tracking-widest text-muted-foreground font-sans font-bold flex items-center space-x-1">
-                <span>By University Cultural Clubs</span>
+              <span className="text-[8px] sm:text-[10px] uppercase tracking-wider sm:tracking-widest text-muted-foreground font-sans font-bold truncate max-w-[150px] sm:max-w-none">
+                AIIMS Raebareli Cultural Fest
               </span>
             </div>
           </Link>
 
           {/* Desktop Navigation Links */}
-          <nav className="hidden lg:flex items-center space-x-1">
+          <nav className="hidden lg:flex items-center space-x-0.5 xl:space-x-1 shrink min-w-0">
             {NAV_LINKS.map((link) => {
               const isActive =
                 link.href === "/"
@@ -94,7 +84,7 @@ export function Navbar() {
                 <Link
                   key={link.name}
                   href={link.href}
-                  className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all relative ${
+                  className={`px-2.5 xl:px-3 py-1.5 rounded-lg text-xs font-bold transition-all relative whitespace-nowrap ${
                     isActive
                       ? "text-fest-sunset bg-fest-sunset/10"
                       : "text-foreground/80 hover:text-foreground hover:bg-fest-champagne/40 dark:hover:bg-fest-charcoal-light/50"
@@ -109,13 +99,11 @@ export function Navbar() {
             })}
           </nav>
 
-          {/* Right Action Icons, Theme & Auth Buttons */}
-          <div className="hidden md:flex items-center space-x-3">
+          {/* Desktop Action Icons, Theme & Auth Buttons */}
+          <div className="hidden lg:flex items-center space-x-3 shrink-0">
             <ThemeToggle />
 
-            {status === "loading" ? (
-              <div className="w-24 h-9 bg-card animate-pulse rounded-xl border border-fest-gold/20" />
-            ) : session ? (
+            {session?.user ? (
               <div className="relative">
                 <button
                   onClick={() => setUserDropdownOpen(!userDropdownOpen)}
@@ -173,7 +161,7 @@ export function Navbar() {
                       </Link>
                     </div>
 
-                    {isAdminOrStaff && (
+                    {isAdmin && (
                       <div className="py-1.5 bg-fest-burgundy/10 dark:bg-fest-plum/30">
                         <Link
                           href="/admin"
@@ -181,7 +169,7 @@ export function Navbar() {
                           className="flex items-center px-4 py-2 text-xs text-fest-sunset font-bold hover:bg-fest-sunset/15 transition-colors"
                         >
                           <ShieldAlert className="w-4 h-4 mr-2.5" />
-                          Fest Coordinator Desk
+                          Fest Admin Desk
                         </Link>
                       </div>
                     )}
@@ -202,12 +190,12 @@ export function Navbar() {
                 )}
               </div>
             ) : (
-              <div className="flex items-center space-x-2">
+              <div className="flex items-center space-x-2 shrink-0">
                 <Link
                   href="/login"
                   className="px-3.5 py-2 text-xs font-bold rounded-xl border border-border hover:border-fest-sunset text-foreground transition-all hover:bg-fest-sunset/5"
                 >
-                  Student Login
+                  Login
                 </Link>
                 <Link
                   href="/register"
@@ -220,12 +208,39 @@ export function Navbar() {
             )}
           </div>
 
-          {/* Mobile Menu & Theme Toggle */}
-          <div className="flex lg:hidden items-center space-x-2">
+          {/* Mobile & Tablet Action Bar (Always displays Login & Theme) */}
+          <div className="flex lg:hidden items-center space-x-1.5 sm:space-x-2 shrink-0">
             <ThemeToggle />
+
+            {session?.user ? (
+              <Link
+                href="/dashboard"
+                className="w-8 h-8 rounded-xl bg-gradient-to-tr from-fest-sunset to-fest-burgundy text-white flex items-center justify-center text-xs font-bold uppercase shadow-sm border border-fest-gold/40 shrink-0"
+                title="Participant Dashboard"
+                aria-label="Participant Dashboard"
+              >
+                {user?.name ? user.name.charAt(0) : "U"}
+              </Link>
+            ) : (
+              <div className="flex items-center space-x-1.5 shrink-0">
+                <Link
+                  href="/login"
+                  className="px-2.5 py-1.5 text-xs font-bold rounded-xl border border-fest-sunset/40 text-fest-sunset bg-fest-sunset/10 hover:bg-fest-sunset hover:text-white transition-all shrink-0"
+                >
+                  Login
+                </Link>
+                <Link
+                  href="/register"
+                  className="hidden sm:inline-flex px-3 py-1.5 text-xs font-bold rounded-xl bg-gradient-to-r from-fest-sunset to-fest-burgundy text-white shadow-sm hover:brightness-110 transition-all shrink-0"
+                >
+                  Pass
+                </Link>
+              </div>
+            )}
+
             <button
               onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-              className="p-2 rounded-xl border border-fest-gold/30 bg-card text-foreground focus:outline-none"
+              className="p-2 rounded-xl border border-fest-gold/30 bg-card text-foreground focus:outline-none shrink-0"
               aria-label="Toggle menu"
             >
               {mobileMenuOpen ? (
@@ -267,7 +282,7 @@ export function Navbar() {
           </nav>
 
           <div className="pt-3 border-t border-border flex flex-col space-y-2">
-            {session ? (
+            {session?.user ? (
               <>
                 <div className="px-3 py-1 text-xs text-muted-foreground">
                   Logged in as <strong className="text-foreground">{user?.name}</strong>
@@ -288,14 +303,14 @@ export function Navbar() {
                   <Ticket className="w-4 h-4 mr-2" />
                   My Fest Entry Tickets
                 </Link>
-                {isAdminOrStaff && (
+                {isAdmin && (
                   <Link
                     href="/admin"
                     onClick={() => setMobileMenuOpen(false)}
                     className="flex items-center px-3 py-2.5 text-xs font-bold rounded-xl bg-fest-burgundy/15 text-fest-sunset"
                   >
                     <ShieldAlert className="w-4 h-4 mr-2" />
-                    Fest Coordinator Desk
+                    Fest Admin Desk
                   </Link>
                 )}
                 <button

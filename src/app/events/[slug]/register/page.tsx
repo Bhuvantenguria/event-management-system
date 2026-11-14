@@ -18,6 +18,7 @@ import {
   ShieldCheck,
 } from "lucide-react";
 import { formatCurrency } from "@/lib/utils";
+import { dataStore } from "@/lib/data-store";
 
 const EVENT_METADATA: Record<string, any> = {
   "kathak-jugalbandi": {
@@ -53,15 +54,26 @@ export default function EventRegistrationPage({ params }: { params: { slug: stri
   const router = useRouter();
   const { data: session, status } = useSession();
 
-  const event = EVENT_METADATA[params.slug] || {
-    title: params.slug.replace(/-/g, " ").toUpperCase(),
-    slug: params.slug,
-    category: "Featured Event",
-    registrationFee: 300,
-    participationType: "both",
-    minTeamSize: 1,
-    maxTeamSize: 4,
-  };
+  const storeEvent = dataStore.getEventBySlug(params.slug) || dataStore.getEventById(params.slug);
+  const event = storeEvent
+    ? {
+        title: storeEvent.title,
+        slug: storeEvent.slug,
+        category: storeEvent.category,
+        registrationFee: storeEvent.registrationFee,
+        participationType: "both",
+        minTeamSize: 1,
+        maxTeamSize: 16,
+      }
+    : EVENT_METADATA[params.slug] || {
+        title: params.slug.replace(/-/g, " ").toUpperCase(),
+        slug: params.slug,
+        category: "Featured Event",
+        registrationFee: 300,
+        participationType: "both",
+        minTeamSize: 1,
+        maxTeamSize: 4,
+      };
 
   const isTeamRequired = event.participationType === "team";
   const [participationType, setParticipationType] = useState<"individual" | "team">(
@@ -182,11 +194,11 @@ export default function EventRegistrationPage({ params }: { params: { slug: stri
 
       {/* Auth Check Reminder if Guest */}
       {!session && status !== "loading" && (
-        <div className="p-4 rounded-xl bg-amber-500/10 border border-amber-500/40 text-foreground flex items-center justify-between text-xs font-sans">
+        <div className="p-4 rounded-xl bg-amber-500/10 border border-amber-500/40 text-foreground flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 text-xs font-sans">
           <span>You need to be signed in as a participant to submit this registration.</span>
           <Link
             href={`/login?callbackUrl=/events/${event.slug}/register`}
-            className="px-3 py-1.5 rounded bg-heritage-maroon text-heritage-ivory font-bold hover:bg-heritage-maroon-dark transition-colors"
+            className="px-3.5 py-1.5 rounded-lg bg-heritage-maroon text-heritage-ivory font-bold hover:bg-heritage-maroon-dark transition-colors shrink-0 text-center w-full sm:w-auto"
           >
             Sign In Now
           </Link>

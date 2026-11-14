@@ -93,7 +93,7 @@ const FEST_CATEGORIES = [
 
 export function CategoryShowcase() {
   return (
-    <section className="py-20 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto border-t border-border/40">
+    <section className="py-20 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto border-t border-border/40 overflow-hidden">
       <HeritageDivider
         subtitle="Explore By Realm"
         title="Festival Arenas & Disciplines"

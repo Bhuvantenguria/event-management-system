@@ -127,7 +127,7 @@ export function ClubsShowcase() {
       />
 
       <p className="text-center text-sm md:text-base text-muted-foreground max-w-2xl mx-auto -mt-4 mb-14 font-sans">
-        Rangmanch &apos;26 is 100% ideated, organized, and managed by our student cultural clubs. Each club curates competitions, invites national judges, and allocates college championship trophy points.
+        AffinityAIIMS is 100% ideated, organized, and managed by our student cultural clubs. Each club curates competitions, invites national judges, and allocates college championship trophy points.
       </p>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
@@ -212,23 +212,23 @@ export function ClubsShowcase() {
       </div>
 
       {/* College Trophy Banner */}
-      <div className="mt-14 rounded-3xl p-8 bg-gradient-to-r from-fest-burgundy via-fest-plum to-fest-charcoal text-white border-2 border-fest-gold/40 shadow-2xl flex flex-col md:flex-row items-center justify-between gap-6">
-        <div className="space-y-2 text-left">
-          <div className="inline-flex items-center space-x-2 px-3 py-1 rounded-full bg-fest-sunset/20 text-fest-sunset text-xs font-bold uppercase tracking-wider">
-            <Trophy className="w-3.5 h-3.5" />
-            <span>The Rolling Inter-Collegiate Fest Trophy</span>
+      <div className="mt-10 sm:mt-14 rounded-3xl p-5 sm:p-8 bg-gradient-to-r from-fest-burgundy via-fest-plum to-fest-charcoal text-white border-2 border-fest-gold/40 shadow-2xl flex flex-col md:flex-row items-start md:items-center justify-between gap-6 max-w-full overflow-hidden">
+        <div className="space-y-2 text-left max-w-full">
+          <div className="inline-flex max-w-full items-center space-x-2 px-3 py-1 rounded-full bg-fest-sunset/20 text-fest-sunset text-[10px] sm:text-xs font-bold uppercase tracking-wider">
+            <Trophy className="w-3.5 h-3.5 shrink-0" />
+            <span className="truncate">The Rolling Inter-Collegiate Fest Trophy</span>
           </div>
-          <h4 className="font-serif text-2xl sm:text-3xl font-black">
+          <h4 className="font-serif text-xl sm:text-2xl md:text-3xl font-black break-words">
             Does Your College Club Have What It Takes?
           </h4>
-          <p className="text-xs sm:text-sm text-fest-champagne/80 font-sans max-w-xl">
+          <p className="text-xs sm:text-sm text-fest-champagne/80 font-sans max-w-xl leading-relaxed">
             Points earned across Dance, Music, Theatre, Literary, Fine Arts, and Sports club competitions tally towards the grand <strong>Overall College Championship Rolling Trophy</strong>.
           </p>
         </div>
 
         <Link
           href="/events"
-          className="px-7 py-3.5 rounded-xl bg-gradient-to-r from-fest-sunset to-fest-burgundy text-white font-sans text-xs font-bold shadow-xl hover:brightness-110 flex items-center space-x-2 flex-shrink-0 border border-fest-gold/40 glow-sunset"
+          className="w-full sm:w-auto px-6 sm:px-7 py-3 sm:py-3.5 rounded-xl bg-gradient-to-r from-fest-sunset to-fest-burgundy text-white font-sans text-xs font-bold shadow-xl hover:brightness-110 flex items-center justify-center space-x-2 shrink-0 border border-fest-gold/40 glow-sunset"
         >
           <span>Register College Contingent</span>
           <ArrowRight className="w-4 h-4" />

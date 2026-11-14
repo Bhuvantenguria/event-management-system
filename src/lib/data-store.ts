@@ -69,10 +69,49 @@ export interface StoredTicket {
   scannedBy?: string;
 }
 
+export interface StoredEvent {
+  id: string;
+  slug: string;
+  title: string;
+  category: string;
+  categoryKey: string;
+  club?: string;
+  description: string;
+  date: string;
+  time: string;
+  venue: string;
+  registrationFee: number;
+  teamSize: string;
+  prizePool: string;
+  poster: string;
+  images?: string[]; // Multiple pictures uploaded for the event
+  status: "Registration Open" | "Registration Closed";
+  rules?: string[];
+  eligibility?: string[];
+  prizes?: Array<{ rank: string; amount: string }>;
+  coordinators?: Array<{ name: string; phone: string; email: string }>;
+  participationType?: "individual" | "team" | "both";
+  minTeamSize?: number;
+  maxTeamSize?: number;
+  createdAt: string;
+}
+
+export interface StoredGalleryItem {
+  id: string;
+  title: string;
+  category: string;
+  year: string;
+  location?: string;
+  image: string;
+  caption?: string;
+  createdAt: string;
+}
+
 export type PersistenceHandler = (
-  collection: "users" | "registrations" | "payments" | "tickets" | "qr_settings",
+  collection: "users" | "registrations" | "payments" | "tickets" | "qr_settings" | "events" | "gallery",
   filter: Record<string, any>,
-  data: Record<string, any>
+  data: Record<string, any>,
+  action?: "upsert" | "delete"
 ) => Promise<void>;
 
 // In-Memory Global Store with Server Persistence Handlers (MongoDB Atlas)
@@ -81,12 +120,14 @@ class DataStore {
   private registrations: StoredRegistration[] = [];
   private payments: StoredPaymentSubmission[] = [];
   private tickets: StoredTicket[] = [];
+  private events: StoredEvent[] = [];
+  private gallery: StoredGalleryItem[] = [];
   private qrSettings = {
-    upiId: "upfest.cultural@paytm",
-    upiName: "Rangmanch UP Cultural Committee",
+    upiId: "swar.aiims@paytm",
+    upiName: "SWAR AIIMS Raebareli",
     qrImageUrl: "https://images.unsplash.com/photo-1607604276583-eef5d076aa5f?q=80&w=800&auto=format&fit=crop",
     paymentInstructions:
-      "1. Scan the Paytm UPI QR code using any UPI app (Paytm, GPay, PhonePe).\n2. Verify beneficiary name: 'Rangmanch UP Cultural Committee'.\n3. Enter exact event fee.\n4. Save the payment receipt screenshot and copy the 12-digit UTR/UPI Reference Number.",
+      "1. Scan the Paytm UPI QR code using any UPI app (Paytm, GPay, PhonePe).\n2. Verify beneficiary name: 'SWAR AIIMS Raebareli'.\n3. Enter exact event fee.\n4. Save the payment receipt screenshot and copy the 12-digit UTR/UPI Reference Number.",
     isEnabled: true,
   };
 
@@ -101,13 +142,14 @@ class DataStore {
   }
 
   private async persist(
-    collection: "users" | "registrations" | "payments" | "tickets" | "qr_settings",
+    collection: "users" | "registrations" | "payments" | "tickets" | "qr_settings" | "events" | "gallery",
     filter: Record<string, any>,
-    data: Record<string, any>
+    data: Record<string, any>,
+    action: "upsert" | "delete" = "upsert"
   ) {
     if (this.persistenceHandler) {
       try {
-        await this.persistenceHandler(collection, filter, data);
+        await this.persistenceHandler(collection, filter, data, action);
       } catch (err) {
         console.error(`MongoDB sync error for ${collection}:`, err);
       }
@@ -116,41 +158,17 @@ class DataStore {
 
   private seedInitialData() {
     const hashedAdmin = bcrypt.hashSync("Admin@1234", 10);
-    const hashedFinance = bcrypt.hashSync("Finance@1234", 10);
-    const hashedScanner = bcrypt.hashSync("Scanner@1234", 10);
     const hashedStudent = bcrypt.hashSync("Student@1234", 10);
 
     this.users = [
       {
-        id: "usr-super-admin-1",
-        email: "admin@rangmanchup.in",
-        name: "Super Administrator",
+        id: "usr-admin-1",
+        email: "admin@aiimsraebareli.edu.in",
+        name: "Fest Administrator",
         passwordHash: hashedAdmin,
-        role: "super_admin",
+        role: "admin",
         phone: "+91 98765 00001",
-        college: "State Festival Secretariat",
-        emailVerified: true,
-        createdAt: new Date().toISOString(),
-      },
-      {
-        id: "usr-finance-admin-1",
-        email: "finance@rangmanchup.in",
-        name: "Finance Controller",
-        passwordHash: hashedFinance,
-        role: "finance_admin",
-        phone: "+91 98765 00002",
-        college: "Festival Accounts Bureau",
-        emailVerified: true,
-        createdAt: new Date().toISOString(),
-      },
-      {
-        id: "usr-scanner-staff-1",
-        email: "scanner@rangmanchup.in",
-        name: "Gate Scanner Staff",
-        passwordHash: hashedScanner,
-        role: "scanner_staff",
-        phone: "+91 98765 00003",
-        college: "Campus Security Team",
+        college: "AIIMS Raebareli Central Committee",
         emailVerified: true,
         createdAt: new Date().toISOString(),
       },
@@ -159,10 +177,10 @@ class DataStore {
         email: "student@example.com",
         name: "Aditi Sharma",
         passwordHash: hashedStudent,
-        role: "participant",
+        role: "student",
         phone: "+91 94512 34567",
-        college: "Lucknow University",
-        studentId: "LU-2024-8891",
+        college: "AIIMS Raebareli",
+        studentId: "AIIMS-2024-8891",
         emailVerified: true,
         createdAt: new Date().toISOString(),
       },
@@ -258,6 +276,166 @@ class DataStore {
       status: "pending",
       createdAt: new Date().toISOString(),
     });
+
+    // Seed Events
+    this.events = [
+      {
+        id: "kathak-jugalbandi",
+        slug: "kathak-jugalbandi",
+        title: "Kathak Jugalbandi – Classical Dance Confluence",
+        categoryKey: "cultural",
+        category: "Dance & Choreo",
+        club: "Mudra Dance Society",
+        description: "A celebration of the Lucknow & Banaras Gharana rhythms with live tabla accompaniment and footwork precision.",
+        date: "13 March 2026",
+        time: "05:00 PM",
+        venue: "Nawab Wajid Ali Shah Auditorium",
+        registrationFee: 300,
+        teamSize: "1–2 Dancers",
+        prizePool: "₹35,000",
+        poster: "https://images.unsplash.com/photo-1547153760-18fc86324498?q=80&w=800&auto=format&fit=crop",
+        images: [
+          "https://images.unsplash.com/photo-1547153760-18fc86324498?q=80&w=800&auto=format&fit=crop",
+          "https://images.unsplash.com/photo-1516450360452-9312f5e86fc7?q=80&w=800&auto=format&fit=crop",
+          "https://images.unsplash.com/photo-1508700115892-45ecd05ae2ad?q=80&w=800&auto=format&fit=crop",
+        ],
+        status: "Registration Open",
+        rules: ["Time limit: 10 minutes", "Classical costumes with ghungroos mandatory", "Live or recorded music permitted"],
+        createdAt: new Date().toISOString(),
+      },
+      {
+        id: "royal-up-football-cup",
+        slug: "royal-up-football-cup",
+        title: "Chhatrapati Shivaji Memorial Football Cup",
+        categoryKey: "sports",
+        category: "Sports Tournaments",
+        club: "Varchasva Sports Council",
+        description: "11-a-side knockout collegiate championship with group fixtures, live stats tracking, and golden boot awards.",
+        date: "12–15 March 2026",
+        time: "08:00 AM",
+        venue: "Main Stadium Turf",
+        registrationFee: 1500,
+        teamSize: "11 + 5 Substitutes",
+        prizePool: "₹75,000",
+        poster: "https://images.unsplash.com/photo-1579952363873-27f3bade9f55?q=80&w=800&auto=format&fit=crop",
+        images: [
+          "https://images.unsplash.com/photo-1579952363873-27f3bade9f55?q=80&w=800&auto=format&fit=crop",
+          "https://images.unsplash.com/photo-1489944445391-11dd35366456?q=80&w=800&auto=format&fit=crop",
+        ],
+        status: "Registration Open",
+        rules: ["FIFA rules apply", "Team squad: 11 on pitch + 5 bench", "Valid student ID mandatory"],
+        createdAt: new Date().toISOString(),
+      },
+      {
+        id: "sufi-rock-night",
+        slug: "sufi-rock-night",
+        title: "Roohaniyat: Pan-India Battle of Sufi Bands",
+        categoryKey: "music",
+        category: "Music & Bands",
+        club: "Dhwani Music Society",
+        description: "Electric guitars meet harmonium and tabla in an electrifying battle of bands between top collegiate squads.",
+        date: "14 March 2026",
+        time: "07:30 PM",
+        venue: "Main Festival Arena",
+        registrationFee: 800,
+        teamSize: "3–8 Musicians",
+        prizePool: "₹50,000",
+        poster: "https://images.unsplash.com/photo-1470225620780-dba8ba36b745?q=80&w=800&auto=format&fit=crop",
+        images: [
+          "https://images.unsplash.com/photo-1470225620780-dba8ba36b745?q=80&w=800&auto=format&fit=crop",
+          "https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?q=80&w=800&auto=format&fit=crop",
+        ],
+        status: "Registration Open",
+        rules: ["Performance time: 15 mins", "Instruments provided: standard drumkit", "Own guitars/keyboards allowed"],
+        createdAt: new Date().toISOString(),
+      },
+      {
+        id: "ai-heritage-hackathon",
+        slug: "ai-heritage-hackathon",
+        title: "Navotsav: AI for UP Tourism & Heritage",
+        categoryKey: "technical",
+        category: "Tech & Hackathons",
+        club: "ByteCraft Tech Society",
+        description: "36-hour hackathon building generative AI tour guides, VR ghat experiences, and handicraft authenticity verification.",
+        date: "13–14 March 2026",
+        time: "09:00 AM",
+        venue: "Turing Tech Pavilion",
+        registrationFee: 500,
+        teamSize: "2–4 Hackers",
+        prizePool: "₹60,000",
+        poster: "https://images.unsplash.com/photo-1517245386807-bb43f82c33c4?q=80&w=800&auto=format&fit=crop",
+        images: [
+          "https://images.unsplash.com/photo-1517245386807-bb43f82c33c4?q=80&w=800&auto=format&fit=crop",
+        ],
+        status: "Registration Open",
+        rules: ["36-hour sprint", "Code must be open-sourced during judging", "Mentors available round-the-clock"],
+        createdAt: new Date().toISOString(),
+      },
+    ];
+
+    // Seed Gallery Items
+    this.gallery = [
+      {
+        id: "gal-1",
+        title: "Varanasi Maha Aarti Twilight Ceremony",
+        category: "Heritage Evenings",
+        year: "2025",
+        location: "Kashi Amphitheatre",
+        image: "https://images.unsplash.com/photo-1561361513-2d000a50f0dc?q=80&w=800&auto=format&fit=crop",
+        caption: "1,008 illuminated brass lamps reflected along Dashashwamedh Ghat at sunset.",
+        createdAt: new Date().toISOString(),
+      },
+      {
+        id: "gal-2",
+        title: "Lucknow Kathak Jugalbandi",
+        category: "Performing Arts",
+        year: "2025",
+        location: "Nawab Wajid Ali Shah Auditorium",
+        image: "https://images.unsplash.com/photo-1547153760-18fc86324498?q=80&w=800&auto=format&fit=crop",
+        caption: "Maestros performing classical footwork and chakkars under royal arches.",
+        createdAt: new Date().toISOString(),
+      },
+      {
+        id: "gal-3",
+        title: "Football Championship Final",
+        category: "Sports Arena",
+        year: "2025",
+        location: "Main Stadium",
+        image: "https://images.unsplash.com/photo-1579952363873-27f3bade9f55?q=80&w=800&auto=format&fit=crop",
+        caption: "High-octane header deciding the Chhatrapati Shivaji Trophy.",
+        createdAt: new Date().toISOString(),
+      },
+      {
+        id: "gal-4",
+        title: "Shaam-e-Awadh Ghazal & Kavi Sammelan",
+        category: "Literary Evenings",
+        year: "2025",
+        location: "Heritage Lawns",
+        image: "https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?q=80&w=800&auto=format&fit=crop",
+        caption: "Courtyard gathering under illuminated chandeliers and candle lanterns.",
+        createdAt: new Date().toISOString(),
+      },
+      {
+        id: "gal-5",
+        title: "Shilpkar: Living Crafts Exhibition",
+        category: "Arts & Crafts",
+        year: "2024",
+        location: "Heritage Quadrangle",
+        image: "https://images.unsplash.com/photo-1528459801416-a9e53bbf4e17?q=80&w=800&auto=format&fit=crop",
+        caption: "Traditional master weavers displaying Banarasi silk handlooms.",
+        createdAt: new Date().toISOString(),
+      },
+      {
+        id: "gal-6",
+        title: "Star Night Headline Concert",
+        category: "Celebrity Nights",
+        year: "2024",
+        location: "Grand Star Arena",
+        image: "https://images.unsplash.com/photo-1470225620780-dba8ba36b745?q=80&w=800&auto=format&fit=crop",
+        caption: "10,000 students singing in unison under fireworks and stage lights.",
+        createdAt: new Date().toISOString(),
+      },
+    ];
   }
 
   // Users
@@ -561,8 +739,109 @@ class DataStore {
     return {
       success: true,
       ticket,
-      message: `Verified entry approved for ${ticket.participantName}. Welcome to Rangmanch UP!`,
+      message: `Verified entry approved for ${ticket.participantName}. Welcome to AffinityAIIMS!`,
     };
+  }
+
+  // Events Management (Supports multiple pictures upload)
+  getAllEvents(): StoredEvent[] {
+    return this.events;
+  }
+
+  getEventById(id: string): StoredEvent | undefined {
+    return this.events.find((e) => e.id === id);
+  }
+
+  getEventBySlug(slug: string): StoredEvent | undefined {
+    return this.events.find((e) => e.slug === slug || e.id === slug);
+  }
+
+  createEvent(event: Omit<StoredEvent, "id" | "createdAt">): StoredEvent {
+    const id = event.slug || `ev-${Date.now()}`;
+    const newEvent: StoredEvent = {
+      ...event,
+      id,
+      images: event.images && event.images.length > 0 ? event.images : [event.poster],
+      createdAt: new Date().toISOString(),
+    };
+    this.events.unshift(newEvent);
+    this.persist("events", { id: newEvent.id }, newEvent, "upsert");
+    return newEvent;
+  }
+
+  updateEvent(id: string, updates: Partial<StoredEvent>): StoredEvent | undefined {
+    const event = this.getEventById(id);
+    if (!event) return undefined;
+    Object.assign(event, updates);
+    this.persist("events", { id }, event, "upsert");
+    return event;
+  }
+
+  deleteEvent(id: string): boolean {
+    const idx = this.events.findIndex((e) => e.id === id);
+    if (idx === -1) return false;
+    const removed = this.events.splice(idx, 1)[0];
+    this.persist("events", { id: removed.id }, removed, "delete");
+    return true;
+  }
+
+  loadEventsFromMongo(events: StoredEvent[]) {
+    for (const e of events) {
+      const idx = this.events.findIndex((x) => x.id === e.id);
+      if (idx >= 0) {
+        this.events[idx] = e;
+      } else {
+        this.events.push(e);
+      }
+    }
+  }
+
+  // Gallery Management (Full CRUD)
+  getAllGalleryItems(): StoredGalleryItem[] {
+    return this.gallery;
+  }
+
+  getGalleryItemById(id: string): StoredGalleryItem | undefined {
+    return this.gallery.find((g) => g.id === id);
+  }
+
+  createGalleryItem(item: Omit<StoredGalleryItem, "id" | "createdAt">): StoredGalleryItem {
+    const id = `gal-${Date.now()}`;
+    const newItem: StoredGalleryItem = {
+      ...item,
+      id,
+      createdAt: new Date().toISOString(),
+    };
+    this.gallery.unshift(newItem);
+    this.persist("gallery", { id: newItem.id }, newItem, "upsert");
+    return newItem;
+  }
+
+  updateGalleryItem(id: string, updates: Partial<StoredGalleryItem>): StoredGalleryItem | undefined {
+    const item = this.getGalleryItemById(id);
+    if (!item) return undefined;
+    Object.assign(item, updates);
+    this.persist("gallery", { id }, item, "upsert");
+    return item;
+  }
+
+  deleteGalleryItem(id: string): boolean {
+    const idx = this.gallery.findIndex((g) => g.id === id);
+    if (idx === -1) return false;
+    const removed = this.gallery.splice(idx, 1)[0];
+    this.persist("gallery", { id: removed.id }, removed, "delete");
+    return true;
+  }
+
+  loadGalleryFromMongo(items: StoredGalleryItem[]) {
+    for (const g of items) {
+      const idx = this.gallery.findIndex((x) => x.id === g.id);
+      if (idx >= 0) {
+        this.gallery[idx] = g;
+      } else {
+        this.gallery.push(g);
+      }
+    }
   }
 }
 

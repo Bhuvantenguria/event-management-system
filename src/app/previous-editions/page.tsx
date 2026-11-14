@@ -46,7 +46,7 @@ const PAST_EDITIONS = [
   },
   {
     year: 2023,
-    theme: "आरम्भ • The Awakening of Rangmanch",
+    theme: "आरम्भ • The Awakening of AffinityAIIMS",
     dates: "10–12 March 2023",
     delegates: "3,200+",
     colleges: "38 Institutions",
@@ -68,7 +68,7 @@ const PAST_EDITIONS = [
 
 export default function PreviousEditionsPage() {
   return (
-    <div className="py-12 sm:py-20 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto space-y-12">
+    <div className="py-12 sm:py-20 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto space-y-12 w-full max-w-full overflow-x-hidden">
       <div className="text-center space-y-3 max-w-3xl mx-auto">
         <span className="inline-block text-xs uppercase tracking-[0.25em] font-bold text-fest-sunset font-sans px-3 py-1 rounded-full bg-fest-sunset/10 border border-fest-sunset/20">
           Festival Legacy & Hall of Fame
@@ -77,7 +77,7 @@ export default function PreviousEditionsPage() {
           Past <span className="sunset-gradient-text">Festival Editions</span>
         </h1>
         <p className="text-xs sm:text-sm md:text-base text-muted-foreground font-sans">
-          A glorious retrospective of championship honors, records, and cultural benchmarks established over previous years of Rangmanch UP.
+          A glorious retrospective of championship honors, records, and cultural benchmarks established over previous years of AffinityAIIMS.
         </p>
       </div>
 

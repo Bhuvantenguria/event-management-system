@@ -31,17 +31,17 @@ describe("Participant & Admin Authentication & RBAC", () => {
   });
 
   it("should enforce strict role permissions", () => {
-    expect(hasRole("super_admin", "finance_admin")).toBe(true); // Super Admin has universal access
-    expect(hasRole("finance_admin", "finance_admin")).toBe(true);
-    expect(hasRole("participant", "finance_admin")).toBe(false);
-    expect(hasRole("participant", ["scanner_staff", "event_coordinator"])).toBe(false);
-    expect(hasRole("scanner_staff", ["scanner_staff", "super_admin"])).toBe(true);
+    expect(hasRole("admin", "admin")).toBe(true); // Single Admin has universal access
+    expect(hasRole("super_admin", "admin")).toBe(true);
+    expect(hasRole("student", "admin")).toBe(false);
+    expect(hasRole("participant", "admin")).toBe(false);
+    expect(hasRole("student", "student")).toBe(true);
   });
 
   it("should have correct permission lists per role", () => {
-    expect(ROLE_PERMISSIONS.finance_admin).toContain("payments:verify");
-    expect(ROLE_PERMISSIONS.scanner_staff).toContain("tickets:scan");
-    expect(ROLE_PERMISSIONS.sports_admin).toContain("sports:manage");
+    expect(ROLE_PERMISSIONS.admin).toContain("*");
+    expect(ROLE_PERMISSIONS.super_admin).toContain("*");
+    expect(ROLE_PERMISSIONS.student).toContain("tickets:own");
     expect(ROLE_PERMISSIONS.participant).toContain("tickets:own");
   });
 });

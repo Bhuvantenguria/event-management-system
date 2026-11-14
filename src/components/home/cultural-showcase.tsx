@@ -46,14 +46,14 @@ const HERITAGE_HUBS = [
 
 export function CulturalShowcase() {
   return (
-    <section className="py-24 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto border-t border-border/40">
+    <section className="py-24 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto border-t border-border/40 overflow-hidden">
       <HeritageDivider
         subtitle="Heritage & Artistic Confluence"
         title="Living Soul of Uttar Pradesh"
       />
 
       <p className="text-center text-sm md:text-base text-muted-foreground max-w-2xl mx-auto -mt-4 mb-12 font-sans">
-        Rangmanch UP is deeply grounded in the civilizational richness of Uttar Pradesh—bringing historic craftsmanship, classical ragas, royal architecture, and folklore onto the contemporary collegiate stage.
+        AffinityAIIMS is deeply grounded in the civilizational richness of Uttar Pradesh—bringing historic craftsmanship, classical ragas, royal architecture, and folklore onto the contemporary collegiate stage.
       </p>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
@@ -116,13 +116,13 @@ export function CulturalShowcase() {
         ))}
       </div>
 
-      <div className="mt-14 text-center">
+      <div className="mt-14 text-center px-2">
         <Link
           href="/heritage"
-          className="inline-flex items-center space-x-2.5 px-8 py-3.5 rounded-xl bg-gradient-to-r from-fest-sunset to-fest-burgundy text-white hover:brightness-110 font-sans text-sm font-bold shadow-lg transition-all transform hover:-translate-y-0.5"
+          className="inline-flex max-w-full items-center justify-center space-x-2.5 px-5 sm:px-8 py-3.5 rounded-xl bg-gradient-to-r from-fest-sunset to-fest-burgundy text-white hover:brightness-110 font-sans text-xs sm:text-sm font-bold shadow-lg transition-all transform hover:-translate-y-0.5 text-center"
         >
-          <Compass className="w-4 h-4" />
-          <span>Discover Complete Uttar Pradesh Cultural Collections</span>
+          <Compass className="w-4 h-4 shrink-0" />
+          <span className="break-words">Discover Complete Uttar Pradesh Cultural Collections</span>
         </Link>
       </div>
     </section>

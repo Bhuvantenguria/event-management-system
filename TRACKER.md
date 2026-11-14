@@ -248,4 +248,135 @@
     - `npx vitest run`: 12/12 tests passing.
     - `npm run build`: 50/50 routes (including new `/api/upload` and `/api/payments/submit`) prerendered cleanly with exit code 0.
 
+---
+
+### Phase 14: Mobile Responsiveness Overhaul & Horizontal Overflow Elimination
+- **Status**: Completed
+- **Why**: Mobile view (375px/425px DevTools preview) exhibited horizontal overflow with a white gutter on the right side and cut-off content on the left due to unconstrained single-line strings, tracking, rigid flex containers, fixed timer widths, and unclipped blur circles.
+- **Root Cause Analysis**:
+  1. *Hero Badge & Subtitle*: An `inline-flex` badge with a 64-character text string and `tracking-wider` without `flex-wrap` or `max-w-full` rendered at ~680px width, forcing the viewport out. Sub-headline text with `tracking-[0.35em]` measured ~550px on a single line.
+  2. *Countdown Timer Boxes*: Four fixed boxes of `w-16` (64px) + colons + gaps exceeded the available viewport width on small devices (<380px).
+  3. *Navbar Elements*: Brand subtitle `By University Cultural Clubs` with `tracking-widest` alongside theme toggle and hamburger button caused layout stress on small viewports.
+  4. *Viewport Overflow Propagation*: `html` lacked `overflow-x: hidden`, `width: 100%`, and `max-width: 100vw`. Per CSS specs, `overflow-x: hidden` on `body` bubbles to the root viewport unless set on `html` as well.
+  5. *Unclipped Decorative Elements*: Large background blur glow circles (e.g. `w-80 h-80` blur circles at `right-0`) in sections lacked `overflow-hidden` on parent `<section>` containers.
+- **Key Technical Fixes Implemented**:
+  - **Global CSS & Layout (`src/app/globals.css`, `src/app/layout.tsx`)**:
+    - Enforced `box-sizing: border-box` across all elements and pseudo-elements.
+    - Added `overflow-x: hidden`, `max-width: 100vw`, and `width: 100%` on both `html` and `body`.
+    - Added responsive media asset constraints: `img, video, canvas, svg { max-width: 100%; height: auto; }`.
+    - Added `overflow-x-hidden max-w-full` to `<main>` in `layout.tsx`.
+  - **Hero Section (`src/components/home/hero-section.tsx`)**:
+    - Converted single-line badge to responsive wrapping container: `inline-flex max-w-full flex-wrap items-center justify-center gap-1.5 sm:gap-2.5 px-3 sm:px-4 py-1.5 text-center`.
+    - Reduced tracking on subtitle to `tracking-wider sm:tracking-[0.25em]` and added `break-words max-w-full`.
+    - Responsive hero title font scaling: `text-4xl sm:text-6xl md:text-8xl lg:text-9xl` with `break-words max-w-full`.
+    - Responsive full-width button sizing on mobile: `w-full sm:w-auto text-center`.
+    - Responsive highlights grid padding and font sizes: `p-3 sm:p-4`, `text-lg sm:text-2xl`.
+  - **Live Countdown Timer (`src/components/home/countdown.tsx`)**:
+    - Replaced rigid `w-16` with responsive width: `w-14 sm:w-20 md:w-24` and height `h-18 sm:h-24 md:h-28`.
+    - Scaled digits (`text-xl sm:text-3xl md:text-4xl`) and labels (`text-[8px] sm:text-[11px]`).
+    - Added `max-w-full` and reduced gap spacing on mobile.
+  - **Floating Navbar (`src/components/layout/navbar.tsx`)**:
+    - Constrained header to `w-full max-w-full px-2 sm:px-6 py-2.5 sm:py-3`.
+    - Added `min-w-0` to brand logo flex container and `shrink-0` to the flame icon and `'26 Fest` badge.
+    - Added truncation to subtitle on small screens: `text-[8px] sm:text-[10px] truncate max-w-[150px] sm:max-w-none`.
+  - **Section Containers & Section Dividers**:
+    - Added `overflow-hidden` and responsive container widths to `AboutEditorial`, `ClubsShowcase`, `SportsSpotlight`, `SchedulePreview`, `SponsorsSection`, `AnnouncementsBanner`, `CategoryShowcase`, `FeaturedEvents`, `CulturalShowcase`, `PreviousEditionsPreview`, `GalleryPreview`, `FaqAccordion`.
+    - Added `max-w-full px-2 break-words` to `HeritageDivider` ornaments and titles (`src/components/ui/heritage-decorations.tsx`).
+    - Responsive ticket and payment layout adjustments across `src/app/dashboard/tickets/page.tsx`, `src/app/dashboard/payments/page.tsx`, `src/app/events/[slug]/register/page.tsx`, `src/app/admin/scanner/page.tsx`, `src/app/sports/page.tsx`, `src/app/events/page.tsx`, `src/app/schedule/page.tsx`, `src/app/gallery/page.tsx`, `src/app/heritage/page.tsx`, `src/app/admin/layout.tsx`, and `src/app/dashboard/layout.tsx`.
+    - Responsive multi-column wrapping for the footer on mobile (`src/components/layout/footer.tsx`).
+- **Verification**:
+  - `npx tsc --noEmit`: 0 TypeScript errors.
+  - `npx vitest run`: 12/12 test suites passing (Sports, Registration, Paytm QR, Tickets & Scanning, Auth).
+  - `npm run build`: 50/50 static and dynamic routes compiled with exit code 0.
+
+---
+
+### Phase 15: Admin Streamlining & Irrelevant Functionality Removal
+- **Status**: Completed
+- **Why**: The user requested removing all irrelevant admin modules and streamlining the admin experience down strictly to 5 essential workflows:
+  1. Create new events with multiple pictures upload & edit/delete management.
+  2. Full CRUD for festival gallery media.
+  3. Organizer Paytm QR settings (editable & updatable by admin for event payments).
+  4. Registrations dashboard filtered specifically by events.
+  5. Separated, dedicated payment approval queue.
+- **Actions Taken**:
+  - **Removed Irrelevant Admin Modules**:
+    - Deleted `src/app/admin/cultural`
+    - Deleted `src/app/admin/sports`
+    - Deleted `src/app/admin/schedule`
+    - Deleted `src/app/admin/sponsors`
+    - Deleted `src/app/admin/email`
+    - Deleted `src/app/admin/attendance`
+    - Deleted `src/app/admin/announcements`
+    - Deleted `src/app/admin/scanner`
+    - Deleted `src/app/api/admin/email`
+    - Deleted `src/app/api/admin/scanner`
+  - **Cleaned Admin Sidebar Navigation (`src/app/admin/layout.tsx`)**:
+    - Reduced sidebar navigation strictly to the required 6 views:
+      1. Overview (`/admin`)
+      2. Create & Manage Events (`/admin/events`)
+      3. Registrations List by Event Filter (`/admin/registrations`)
+      4. Payment Approvals (`/admin/payments`)
+      5. Gallery Media CRUD (`/admin/gallery`)
+      6. Organizer Paytm QR (`/admin/settings`)
+  - **Enhanced Event Management (`src/app/admin/events/page.tsx`)**:
+    - Connected directly to `dataStore` with MongoDB Atlas sync.
+    - Added multi-file image selection and Cloudinary upload with real-time thumbnail preview strip and remove buttons.
+    - Supports setting primary cover poster and attaching extra gallery pictures to any event.
+    - Full edit modal to update titles, fees, dates, venues, clubs, rules, and images.
+    - Status toggle ("Registration Open" vs "Registration Closed") and event deletion.
+    - Updated public event details page (`/events/[slug]`) to showcase attached picture galleries.
+  - **Built Full Gallery Media CRUD (`src/app/admin/gallery/page.tsx`)**:
+    - **Create**: Add new gallery photo with file upload to Cloudinary or image URL, title, edition year, category, and caption.
+    - **Read**: Live search by caption/title and filter by category or year.
+    - **Update**: Edit modal to modify existing gallery photo details and image links.
+    - **Delete**: Remove photo from gallery with confirmation.
+    - Updated public `/gallery` page to load directly from `dataStore.getAllGalleryItems()`.
+  - **Organizer Paytm QR Settings (`src/app/admin/settings/page.tsx`)**:
+    - Streamlined as "Organizer Paytm QR Configuration".
+    - Admin can update UPI ID, organizer account name, payment instructions, and upload a new Paytm QR image.
+    - Live participant checkout card preview reflecting exact appearance on the student payment portal.
+  - **Registrations Dashboard with Event Filter (`src/app/admin/registrations/page.tsx`)**:
+    - Added a dedicated Event filter dropdown listing all active competitions with registration counts.
+    - Added status filters, format filters, and full text search across participant name, college, email, and team.
+    - Added detailed inspection modal to view team rosters and payment statuses.
+    - Added CSV export and printable roster capabilities.
+  - **Separated Payment Approval Queue (`src/app/admin/payments/page.tsx`)**:
+    - Separated, dedicated queue solely for verifying UPI transactions.
+    - Status tabs default to "Pending Review" with live counter badges.
+    - Inspection modal showing high-res screenshot view, expected vs submitted amounts, and 12-digit UTR with 1-click copy.
+    - 1-click actions: Approve (auto-confirms registration & issues ticket), Request Resubmission, and Reject with custom feedback note.
+- **Verification**:
+  - `npx tsc --noEmit`: 0 TypeScript errors.
+  - `npx vitest run`: 16/16 tests passing across 6 test suites (including new `admin-streamlined-flows.test.ts`).
+  - `npm run build`: 40/40 routes compiled cleanly with exit code 0.
+
+---
+
+### Phase 8: Rebranding to AffinityAIIMS, Official Contact Update & Dark Mode Default
+- **Status**: Completed
+- **Why**: Transition project main heading to **AffinityAIIMS** (AIIMS Raebareli), update official contact address and email to **`swar@aiimsraebareli.edu.in`**, and set the default platform theme to **dark** mode without hydration flicker.
+- **Key Changes**:
+  - **Default Dark Theme Configuration**:
+    - `src/components/theme-provider.tsx`: Updated `initialState`, fallback state, and `defaultTheme="dark"` with storageKey `"affinity-aiims-theme"`.
+    - `src/app/layout.tsx`: Configured `<html lang="en" className="dark overflow-x-hidden max-w-full">` and `<ThemeProvider defaultTheme="dark" storageKey="affinity-aiims-theme">` to eliminate light-mode hydration flashing.
+  - **Main Project Heading & Brand Identity**:
+    - `src/app/layout.tsx`: Updated metadata title to `"AffinityAIIMS | Annual Inter-Collegiate Cultural Fest - AIIMS Raebareli"`.
+    - `src/components/layout/navbar.tsx`: Updated brand logo to `AffinityAIIMS` with badge `'26 Fest` and subtitle `AIIMS Raebareli Cultural Fest`.
+    - `src/components/home/hero-section.tsx`: Main campaign hero title updated to `AffinityAIIMS` with AIIMS Raebareli badges and collegiate context.
+    - `src/components/layout/footer.tsx`: Rebranded to `AffinityAIIMS` with SWAR organizing council notice.
+    - `src/app/admin/layout.tsx`: Admin header updated to `AffinityAIIMS Admin`.
+    - `src/app/about/page.tsx`, `src/app/login/page.tsx`, `src/app/register/page.tsx`, `src/app/dashboard/tickets/page.tsx`: Updated heading and pass identity to `AffinityAIIMS`.
+    - `src/components/home/about-editorial.tsx`, `src/components/home/clubs-showcase.tsx`, `src/components/home/cultural-showcase.tsx`, `src/components/home/previous-editions-preview.tsx`, `src/components/home/sponsors-section.tsx`, `src/components/ui/heritage-decorations.tsx`: Updated all references to `AffinityAIIMS`.
+  - **Official Contact Details**:
+    - Contact email updated to `swar@aiimsraebareli.edu.in` across footer, contact page, sponsor inquiries, and transactional email sender configuration.
+    - Campus physical address updated to `AIIMS Campus, Dalmau Road, Munshiganj, Raebareli, UP 229405`.
+  - **Verification**:
+    - `npx tsc --noEmit`: 0 TypeScript errors.
+    - `npx vitest run`: 16/16 tests passing across 6 test suites.
+    - `npm run build`: 40/40 routes compiled cleanly with exit code 0.
+
+
+
+
 

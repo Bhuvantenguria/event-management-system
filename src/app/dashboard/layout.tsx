@@ -31,17 +31,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
   const user = session?.user;
   const role = (user as any)?.role;
-  const isAdminOrStaff =
-    role &&
-    [
-      "super_admin",
-      "event_admin",
-      "finance_admin",
-      "sports_admin",
-      "gallery_admin",
-      "event_coordinator",
-      "scanner_staff",
-    ].includes(role);
+  const isAdmin = role && ["admin", "super_admin"].includes(role);
 
   return (
     <div className="min-h-screen bg-background flex flex-col md:flex-row">
@@ -99,10 +89,10 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           </nav>
 
           {/* Admin Switch if authorized */}
-          {isAdminOrStaff && (
+          {isAdmin && (
             <div className="pt-4 border-t border-border">
               <span className="text-[10px] uppercase tracking-wider font-bold text-muted-foreground px-3 mb-2 block font-sans">
-                Staff Control
+                Administrator
               </span>
               <Link
                 href="/admin"
@@ -136,7 +126,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       </aside>
 
       {/* Main Content Area */}
-      <main className="flex-1 p-4 sm:p-6 lg:p-8 overflow-y-auto">
+      <main className="flex-1 p-3 sm:p-6 lg:p-8 overflow-y-auto max-w-full overflow-x-hidden">
         {children}
       </main>
     </div>

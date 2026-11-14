@@ -16,7 +16,7 @@ export async function POST(request: Request) {
       );
     }
 
-    const adminEmail = (email || "admin@rangmanchup.in").toLowerCase().trim();
+    const adminEmail = (email || "admin@aiimsraebareli.edu.in").toLowerCase().trim();
     const existing = dataStore.getUserByEmail(adminEmail);
 
     if (existing) {

@@ -33,7 +33,7 @@ export function Footer() {
               </div>
               <div className="flex flex-col">
                 <span className="font-serif text-2xl font-black tracking-tight text-white group-hover:text-fest-sunset transition-colors">
-                  रंगमंच <span className="text-fest-sunset">&apos;26 Fest</span>
+                  Affinity<span className="text-fest-sunset">AIIMS</span>
                 </span>
                 <span className="text-[10px] uppercase tracking-widest text-fest-gold-light font-sans font-bold">
                   Annual Inter-Collegiate Cultural Fest
@@ -42,9 +42,9 @@ export function Footer() {
             </Link>
 
             <p className="text-xs sm:text-sm text-fest-champagne/80 leading-relaxed font-sans max-w-sm">
-              The premier pan-India college cultural festival organized by university student clubs.
-              Over 5,000 delegates competing in Kathak & street plays, band battles, poetry slams,
-              hackathons, and varsity football for the Rolling College Fest Trophy.
+              The premier pan-India college cultural festival organized by AIIMS Raebareli student societies.
+              Delegates competing in Kathak &amp; street plays, band battles, poetry slams,
+              hackathons, and varsity championships for the Rolling Trophy.
             </p>
 
             <div className="pt-2 flex flex-wrap gap-2 text-[10px] font-sans">
@@ -135,7 +135,7 @@ export function Footer() {
               </li>
               <li>
                 <Link href="/login" className="hover:text-fest-sunset transition-colors">
-                  Student Login
+                  Login
                 </Link>
               </li>
               <li>
@@ -145,10 +145,10 @@ export function Footer() {
               </li>
               <li>
                 <Link
-                  href="/admin/scanner"
+                  href="/admin/events"
                   className="hover:text-fest-sunset transition-colors text-fest-gold-light font-semibold"
                 >
-                  Live Camera Gate QR Scanner
+                  Create &amp; Manage Events
                 </Link>
               </li>
               <li>
@@ -172,21 +172,21 @@ export function Footer() {
               <div className="flex items-start space-x-2">
                 <MapPin className="w-4 h-4 text-fest-gold flex-shrink-0 mt-0.5" />
                 <span>
-                  Student Activity Centre (SAC), Central Campus, Lucknow, UP 226001
+                  AIIMS Campus, Dalmau Road, Munshiganj, Raebareli, UP 229405
                 </span>
               </div>
               <div className="flex items-center space-x-2">
                 <Mail className="w-4 h-4 text-fest-gold flex-shrink-0" />
                 <a
-                  href="mailto:fest@rangmanchup.in"
+                  href="mailto:swar@aiimsraebareli.edu.in"
                   className="hover:text-fest-sunset transition-colors"
                 >
-                  fest@rangmanchup.in
+                  swar@aiimsraebareli.edu.in
                 </a>
               </div>
               <div className="flex items-center space-x-2">
                 <Phone className="w-4 h-4 text-fest-gold flex-shrink-0" />
-                <span>+91 98765 43210 (Student General Secy)</span>
+                <span>+91 98765 43210 (SWAR Secretariat)</span>
               </div>
               <div className="pt-2">
                 <Link
@@ -202,27 +202,27 @@ export function Footer() {
         </div>
 
         {/* Bottom Bar with College Fest Identity & Legal */}
-        <div className="mt-14 pt-8 border-t border-fest-gold/20 flex flex-col sm:flex-row items-center justify-between text-xs text-fest-champagne/70 font-sans gap-4">
-          <div className="flex items-center space-x-2">
+        <div className="mt-14 pt-8 border-t border-fest-gold/20 flex flex-col md:flex-row items-center justify-between text-xs text-fest-champagne/70 font-sans gap-4 text-center md:text-left">
+          <div className="flex items-center justify-center md:justify-start">
             <span className="font-sans text-fest-gold-light font-bold">
-              Organized by University Cultural Council & Student Body Societies
+              Organized by SWAR (Student Welfare Association of AIIMS Raebareli)
             </span>
           </div>
 
-          <div className="flex items-center space-x-6">
+          <div className="flex flex-wrap items-center justify-center gap-4 sm:gap-6">
             <Link href="/privacy" className="hover:text-fest-sunset transition-colors">
               Privacy Policy
             </Link>
             <Link href="/terms" className="hover:text-fest-sunset transition-colors">
-              Rules & Code of Conduct
+              Rules &amp; Code of Conduct
             </Link>
             <Link href="/faq" className="hover:text-fest-sunset transition-colors">
               FAQ
             </Link>
           </div>
 
-          <div>
-            <span>© 2026 Rangmanch Inter-Collegiate Cultural Fest. All rights reserved.</span>
+          <div className="text-center md:text-right">
+            <span>© 2026 AffinityAIIMS Inter-Collegiate Cultural Fest. All rights reserved.</span>
           </div>
         </div>
       </div>

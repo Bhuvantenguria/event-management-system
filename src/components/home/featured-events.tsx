@@ -157,7 +157,7 @@ export function FeaturedEvents() {
       : SAMPLE_FEATURED_EVENTS.filter((e) => e.categoryKey === activeTab);
 
   return (
-    <section className="py-24 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto border-t border-border/40">
+    <section className="py-24 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto border-t border-border/40 overflow-hidden">
       <HeritageDivider
         subtitle="Competitions & Showcases"
         title="Featured Inter-College Contests"
@@ -291,13 +291,13 @@ export function FeaturedEvents() {
         ))}
       </div>
 
-      <div className="mt-14 text-center">
+      <div className="mt-14 text-center px-2">
         <Link
           href="/events"
-          className="inline-flex items-center space-x-2.5 px-8 py-3.5 rounded-xl bg-fest-plum hover:bg-fest-burgundy text-white text-sm font-bold border border-fest-gold/40 shadow-xl transition-all transform hover:-translate-y-0.5"
+          className="inline-flex max-w-full items-center justify-center space-x-2.5 px-5 sm:px-8 py-3.5 rounded-xl bg-fest-plum hover:bg-fest-burgundy text-white text-xs sm:text-sm font-bold border border-fest-gold/40 shadow-xl transition-all transform hover:-translate-y-0.5 text-center"
         >
-          <span>View All 40+ Competitions & Register</span>
-          <ArrowRight className="w-4 h-4 text-fest-sunset" />
+          <span className="break-words">View All 40+ Competitions &amp; Register</span>
+          <ArrowRight className="w-4 h-4 text-fest-sunset shrink-0" />
         </Link>
       </div>
     </section>

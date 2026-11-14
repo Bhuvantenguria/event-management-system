@@ -46,7 +46,7 @@ export async function getDatabase(dbName?: string): Promise<Db | null> {
   if (!mongoClient) return null;
   const customDb = dbName || process.env.MONGODB_DB_NAME;
   // If specific db specified or via env, use that; otherwise let driver use connection string db or fallback
-  return customDb ? mongoClient.db(customDb) : mongoClient.db("rangmanch_fest_db");
+  return customDb ? mongoClient.db(customDb) : mongoClient.db("affinity_aiims_db");
 }
 
 export async function isMongoConnected(): Promise<boolean> {
@@ -84,6 +84,11 @@ export async function getTicketsCollection(): Promise<Collection | null> {
 export async function getEventsCollection(): Promise<Collection | null> {
   const db = await getDatabase();
   return db ? db.collection("events") : null;
+}
+
+export async function getGalleryCollection(): Promise<Collection | null> {
+  const db = await getDatabase();
+  return db ? db.collection("gallery") : null;
 }
 
 export async function getQrSettingsCollection(): Promise<Collection | null> {
