@@ -191,6 +191,17 @@ class DataStore {
         createdAt: new Date().toISOString(),
       },
       {
+        id: "usr-admin-3",
+        email: "admin@admin.com",
+        name: "Administrator",
+        passwordHash: hashedAdmin,
+        role: "super_admin",
+        phone: "+91 98765 00003",
+        college: "Festival Central Secretariat",
+        emailVerified: true,
+        createdAt: new Date().toISOString(),
+      },
+      {
         id: "usr-student-1",
         email: "student@example.com",
         name: "Aditi Sharma",

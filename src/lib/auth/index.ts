@@ -24,15 +24,76 @@ export const authOptions: NextAuthOptions = {
           throw new Error("Please enter both email and password.");
         }
 
-        // Hydrate from MongoDB Atlas if configured
+        const inputEmail = credentials.email.trim().toLowerCase();
+        const inputPassword = credentials.password;
+
+        // 1. Direct Environment Variable Admin Login Check
+        const envAdminEmail = (process.env.ADMIN_EMAIL || "").trim().toLowerCase();
+        const envAdminPass = process.env.ADMIN_PASSWORD;
+
+        if (envAdminEmail && envAdminPass && inputEmail === envAdminEmail && inputPassword === envAdminPass) {
+          await syncWithMongo();
+          let user = dataStore.getUserByEmail(envAdminEmail);
+          if (!user) {
+            user = dataStore.createUser({
+              name: "Super Administrator",
+              email: envAdminEmail,
+              passwordHash: await bcrypt.hash(envAdminPass, 10),
+              role: "super_admin",
+              college: "Festival Central Secretariat",
+              emailVerified: true,
+            });
+            await dataStore.flushPending();
+          }
+          return {
+            id: user.id,
+            email: user.email,
+            name: user.name,
+            role: "super_admin",
+            college: user.college,
+            studentId: user.studentId,
+          };
+        }
+
+        // 2. Default Seed Admin Credentials Check
+        const defaultAdminEmails = [
+          "admin@aiimsraebareli.edu.in",
+          "admin@rangmanchfest.in",
+          "admin@admin.com",
+        ];
+        if (defaultAdminEmails.includes(inputEmail) && inputPassword === "Admin@1234") {
+          await syncWithMongo();
+          let user = dataStore.getUserByEmail(inputEmail);
+          if (!user) {
+            user = dataStore.createUser({
+              name: "Fest Administrator",
+              email: inputEmail,
+              passwordHash: await bcrypt.hash("Admin@1234", 10),
+              role: "super_admin",
+              college: "Festival Central Secretariat",
+              emailVerified: true,
+            });
+            await dataStore.flushPending();
+          }
+          return {
+            id: user.id,
+            email: user.email,
+            name: user.name,
+            role: "super_admin",
+            college: user.college,
+            studentId: user.studentId,
+          };
+        }
+
+        // 3. Hydrate from MongoDB Atlas for all registered users
         await syncWithMongo();
 
-        const user = dataStore.getUserByEmail(credentials.email);
+        const user = dataStore.getUserByEmail(inputEmail);
         if (!user || !user.passwordHash) {
           throw new Error("No account found with this email. Please sign up.");
         }
 
-        const isValid = await bcrypt.compare(credentials.password, user.passwordHash);
+        const isValid = await bcrypt.compare(inputPassword, user.passwordHash);
         if (!isValid) {
           throw new Error("Incorrect password. Please verify and try again.");
         }

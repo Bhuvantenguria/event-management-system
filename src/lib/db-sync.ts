@@ -69,6 +69,16 @@ export async function syncWithMongo(force = false): Promise<void> {
           await usersCol.updateOne({ id: u.id }, { $set: u }, { upsert: true });
         }
       }
+
+      // Ensure all Admin accounts are always guaranteed to exist in Atlas
+      const adminUsers = dataStore.getAllUsers().filter((u) => u.role === "admin" || u.role === "super_admin");
+      for (const admin of adminUsers) {
+        await usersCol.updateOne(
+          { email: admin.email.toLowerCase() },
+          { $set: admin },
+          { upsert: true }
+        );
+      }
     }
 
     // 2. Sync Registrations

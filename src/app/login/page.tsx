@@ -26,14 +26,18 @@ function LoginForm() {
 
     try {
       const res = await signIn("credentials", {
-        email,
+        email: email.trim(),
         password,
         redirect: false,
         callbackUrl,
       });
 
       if (res?.error) {
-        setError(res.error);
+        if (res.error === "CredentialsSignin") {
+          setError("Invalid email or password. Please verify your credentials and try again.");
+        } else {
+          setError(res.error);
+        }
         setLoading(false);
       } else {
         router.push(callbackUrl);

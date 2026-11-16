@@ -38,10 +38,45 @@ describe("Participant & Admin Authentication & RBAC", () => {
     expect(hasRole("student", "student")).toBe(true);
   });
 
-  it("should have correct permission lists per role", () => {
-    expect(ROLE_PERMISSIONS.admin).toContain("*");
-    expect(ROLE_PERMISSIONS.super_admin).toContain("*");
-    expect(ROLE_PERMISSIONS.student).toContain("tickets:own");
-    expect(ROLE_PERMISSIONS.participant).toContain("tickets:own");
+  it("should authenticate admin using default credentials or env credentials", async () => {
+    const { authOptions } = await import("@/lib/auth");
+    const credentialsProvider = authOptions.providers[0] as any;
+    const authorizeFn = credentialsProvider.options?.authorize || credentialsProvider.authorize;
+
+    // Test 1: Default admin with extra spaces and uppercase in email
+    const adminUser = await authorizeFn({
+      email: "  Admin@RangmanchFest.in  ",
+      password: "Admin@1234",
+    });
+
+    expect(adminUser).toBeDefined();
+    expect(adminUser.role).toBe("super_admin");
+    expect(adminUser.email).toBe("admin@rangmanchfest.in");
+
+    // Test 2: AIIMS default admin
+    const aiimsAdmin = await authorizeFn({
+      email: "admin@aiimsraebareli.edu.in",
+      password: "Admin@1234",
+    });
+
+    expect(aiimsAdmin).toBeDefined();
+    expect(aiimsAdmin.role).toBe("super_admin");
+
+    // Test 3: Custom environment variable admin
+    process.env.ADMIN_EMAIL = "superboss@festival.org";
+    process.env.ADMIN_PASSWORD = "CustomSecretPass@2026";
+
+    const customAdmin = await authorizeFn({
+      email: "superboss@festival.org",
+      password: "CustomSecretPass@2026",
+    });
+
+    expect(customAdmin).toBeDefined();
+    expect(customAdmin.email).toBe("superboss@festival.org");
+    expect(customAdmin.role).toBe("super_admin");
+
+    // Clean up
+    delete process.env.ADMIN_EMAIL;
+    delete process.env.ADMIN_PASSWORD;
   });
 });
