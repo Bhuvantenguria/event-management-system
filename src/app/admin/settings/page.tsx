@@ -73,15 +73,27 @@ export default function AdminSettingsPage() {
     }
   };
 
-  const handleSave = (e: React.FormEvent) => {
+  const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
-    dataStore.updateQrSettings({
+    const payload = {
       upiId: upiId.trim(),
       upiName: upiName.trim(),
       qrImageUrl: qrImageUrl.trim(),
       paymentInstructions: paymentInstructions.trim(),
       isEnabled,
-    });
+    };
+
+    try {
+      await fetch("/api/admin/qr-settings", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+    } catch (err: any) {
+      console.warn("API qr-settings update notice:", err?.message);
+    }
+
+    dataStore.updateQrSettings(payload);
     setSaved(true);
     setTimeout(() => setSaved(false), 3500);
   };

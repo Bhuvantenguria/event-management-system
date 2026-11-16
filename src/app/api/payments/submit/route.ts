@@ -62,6 +62,9 @@ export async function POST(request: Request) {
       notes,
     });
 
+    // Ensure payment submission is saved to MongoDB Atlas
+    await dataStore.flushPending();
+
     return NextResponse.json({
       success: true,
       message: "Payment proof submitted successfully! Verification pending.",

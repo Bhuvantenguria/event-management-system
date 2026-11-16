@@ -4,6 +4,7 @@ import { authOptions } from "@/lib/auth";
 import { dataStore } from "@/lib/data-store";
 import { syncWithMongo } from "@/lib/db-sync";
 import { hasRole } from "@/lib/permissions";
+import { sendPaymentApprovalEmail, sendPaymentRejectionEmail } from "@/lib/email";
 
 export async function GET(request: Request) {
   const session = await getServerSession(authOptions);
@@ -54,9 +55,44 @@ export async function POST(request: Request) {
       );
     }
 
+    await syncWithMongo();
+
+    const payment = dataStore.getAllPayments().find((p) => p.id === paymentId);
+    if (!payment) {
+      return NextResponse.json({ error: "Payment submission not found." }, { status: 404 });
+    }
+
+    const reg = dataStore.getRegistrationById(payment.registrationId);
+
     const success = dataStore.reviewPayment(paymentId, reviewerId, action, rejectionReason);
     if (!success) {
-      return NextResponse.json({ error: "Payment submission not found." }, { status: 404 });
+      return NextResponse.json({ error: "Payment review update failed." }, { status: 500 });
+    }
+
+    // Ensure all changes (payment, registration, ticket) are flushed to MongoDB Atlas
+    await dataStore.flushPending();
+
+    // Trigger Nodemailer notifications
+    if (reg) {
+      if (action === "approve") {
+        const ticket = dataStore.getTicketByRegistrationId(reg.id);
+        if (ticket) {
+          sendPaymentApprovalEmail(
+            reg.userEmail,
+            reg.userName,
+            reg.eventTitle,
+            ticket.ticketNumber,
+            ticket.qrToken
+          ).catch((err) => console.warn("Payment approval email notice:", err?.message || err));
+        }
+      } else if (action === "reject" || action === "resubmit") {
+        sendPaymentRejectionEmail(
+          reg.userEmail,
+          reg.userName,
+          reg.eventTitle,
+          rejectionReason || "Verification criteria not met. Please review submission details."
+        ).catch((err) => console.warn("Payment rejection email notice:", err?.message || err));
+      }
     }
 
     return NextResponse.json({

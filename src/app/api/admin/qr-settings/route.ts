@@ -31,6 +31,8 @@ export async function POST(request: Request) {
       isEnabled: isEnabled !== undefined ? isEnabled : undefined,
     });
 
+    await dataStore.flushPending();
+
     return NextResponse.json({
       success: true,
       message: "Paytm QR configuration updated successfully.",

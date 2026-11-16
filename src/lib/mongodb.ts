@@ -1,7 +1,11 @@
-import { MongoClient, Db, Collection } from "mongodb";
+import { MongoClient, Db, Collection, MongoClientOptions } from "mongodb";
 
 const uri = process.env.MONGODB_URI || "";
-const options = {};
+const options: MongoClientOptions = {
+  serverSelectionTimeoutMS: 5000,
+  maxPoolSize: 10,
+  minPoolSize: 1,
+};
 
 let client: MongoClient;
 let clientPromise: Promise<MongoClient> | null = null;
@@ -9,21 +13,17 @@ let clientPromise: Promise<MongoClient> | null = null;
 declare global {
   // eslint-disable-next-line no-var
   var _mongoClientPromise: Promise<MongoClient> | undefined;
+  // eslint-disable-next-line no-var
+  var _mongoIndexesInitialized: boolean | undefined;
 }
 
 if (uri) {
-  if (process.env.NODE_ENV === "development") {
-    // In development mode, use a global variable so the client promise is preserved across HMR
-    if (!global._mongoClientPromise) {
-      client = new MongoClient(uri, options);
-      global._mongoClientPromise = client.connect();
-    }
-    clientPromise = global._mongoClientPromise;
-  } else {
-    // In production mode, standard connection pooling
+  // Preserve client promise across HMR in development and across warm lambdas in serverless
+  if (!global._mongoClientPromise) {
     client = new MongoClient(uri, options);
-    clientPromise = client.connect();
+    global._mongoClientPromise = client.connect();
   }
+  clientPromise = global._mongoClientPromise;
 } else {
   // Graceful fallback when MONGODB_URI is not set
   if (process.env.NODE_ENV !== "test") {
@@ -44,9 +44,8 @@ export async function getMongoClient(): Promise<MongoClient | null> {
 export async function getDatabase(dbName?: string): Promise<Db | null> {
   const mongoClient = await getMongoClient();
   if (!mongoClient) return null;
-  const customDb = dbName || process.env.MONGODB_DB_NAME;
-  // If specific db specified or via env, use that; otherwise let driver use connection string db or fallback
-  return customDb ? mongoClient.db(customDb) : mongoClient.db("affinity_aiims_db");
+  const customDb = dbName || process.env.MONGODB_DB_NAME || "rangmanch_fest_db";
+  return mongoClient.db(customDb);
 }
 
 export async function isMongoConnected(): Promise<boolean> {
@@ -57,6 +56,38 @@ export async function isMongoConnected(): Promise<boolean> {
     return true;
   } catch {
     return false;
+  }
+}
+
+/**
+ * Initializes production indexes for collections to enforce constraints and optimize lookups
+ */
+export async function ensureMongoIndexes(): Promise<void> {
+  if (global._mongoIndexesInitialized) return;
+  const db = await getDatabase();
+  if (!db) return;
+
+  try {
+    await Promise.allSettled([
+      db.collection("users").createIndex({ email: 1 }, { unique: true, sparse: true }),
+      db.collection("registrations").createIndex({ id: 1 }, { unique: true }),
+      db.collection("registrations").createIndex({ registrationNumber: 1 }, { unique: true }),
+      db.collection("registrations").createIndex({ qrToken: 1 }, { unique: true }),
+      db.collection("registrations").createIndex({ userId: 1 }),
+      db.collection("payments").createIndex({ id: 1 }, { unique: true }),
+      db.collection("payments").createIndex({ utrNumber: 1 }, { unique: true, sparse: true }),
+      db.collection("payments").createIndex({ registrationId: 1 }),
+      db.collection("tickets").createIndex({ id: 1 }, { unique: true }),
+      db.collection("tickets").createIndex({ qrToken: 1 }, { unique: true }),
+      db.collection("tickets").createIndex({ registrationId: 1 }),
+      db.collection("events").createIndex({ id: 1 }, { unique: true }),
+      db.collection("events").createIndex({ slug: 1 }, { unique: true, sparse: true }),
+      db.collection("gallery").createIndex({ id: 1 }, { unique: true }),
+      db.collection("qr_settings").createIndex({ id: 1 }, { unique: true }),
+    ]);
+    global._mongoIndexesInitialized = true;
+  } catch (err) {
+    console.warn("MongoDB index creation notice:", err);
   }
 }
 

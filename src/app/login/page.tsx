@@ -45,11 +45,6 @@ function LoginForm() {
     }
   };
 
-  const handleDemoLogin = (demoEmail: string, demoPass: string) => {
-    setEmail(demoEmail);
-    setPassword(demoPass);
-  };
-
   return (
     <div className="rounded-2xl bg-card border border-heritage-gold/40 p-6 sm:p-8 shadow-xl space-y-6">
       {error && (
@@ -71,7 +66,7 @@ function LoginForm() {
               required
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              placeholder="student@example.com"
+              placeholder="admin@aiimsraebareli.edu.in"
               className="w-full pl-9 pr-3 py-2 text-xs sm:text-sm rounded-md bg-background border border-border text-foreground focus:outline-none focus:ring-2 focus:ring-heritage-gold/50"
             />
           </div>
@@ -118,32 +113,7 @@ function LoginForm() {
         </button>
       </form>
 
-      {/* Quick Demo Personas Auto-Fill */}
-      <div className="pt-4 border-t border-border space-y-2">
-        <span className="text-[11px] font-bold text-muted-foreground uppercase tracking-wider block font-sans">
-          Quick One-Click Demo Personas:
-        </span>
-        <div className="grid grid-cols-2 gap-2.5 text-xs font-sans">
-          <button
-            type="button"
-            onClick={() => handleDemoLogin("admin@aiimsraebareli.edu.in", "Admin@1234")}
-            className="p-2.5 rounded-xl bg-fest-sunset/10 hover:bg-fest-sunset/20 border border-fest-sunset/40 text-fest-sunset font-bold text-left truncate flex items-center space-x-2 transition-colors"
-          >
-            <span>👑</span>
-            <span className="truncate">Administrator</span>
-          </button>
-          <button
-            type="button"
-            onClick={() => handleDemoLogin("student@example.com", "Student@1234")}
-            className="p-2.5 rounded-xl bg-heritage-sandstone/15 hover:bg-heritage-sandstone/30 border border-heritage-gold/30 text-foreground font-bold text-left truncate flex items-center space-x-2 transition-colors"
-          >
-            <span>👤</span>
-            <span className="truncate">Student / Participant</span>
-          </button>
-        </div>
-      </div>
-
-      <div className="text-center pt-2 text-xs text-muted-foreground font-sans">
+      <div className="text-center pt-2 text-xs text-muted-foreground font-sans border-t border-border">
         Don't have an account yet?{" "}
         <Link
           href="/register"
@@ -167,10 +137,10 @@ export default function LoginPage() {
             <LotusOrnament className="w-6 h-6 text-heritage-gold" />
           </div>
           <h1 className="font-serif text-3xl font-black text-foreground">
-            Affinity<span className="gold-gradient-text">AIIMS</span>
+            Rangmanch<span className="gold-gradient-text">'26</span>
           </h1>
           <p className="text-xs sm:text-sm text-muted-foreground font-sans">
-            Participant & Staff Portal Login
+            Festival Portal Login
           </p>
         </div>
 

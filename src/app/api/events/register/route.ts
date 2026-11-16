@@ -68,6 +68,9 @@ export async function POST(request: Request) {
       dataStore.createTicketForRegistration(newReg);
     }
 
+    // Flush registration & optional ticket to MongoDB Atlas
+    await dataStore.flushPending();
+
     return NextResponse.json({
       success: true,
       message: isFree

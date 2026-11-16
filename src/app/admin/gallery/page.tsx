@@ -55,7 +55,19 @@ export default function AdminGalleryCMSPage() {
   const [uploadError, setUploadError] = useState("");
   const [saveSuccess, setSaveSuccess] = useState(false);
 
-  const loadGallery = () => {
+  const loadGallery = async () => {
+    try {
+      const res = await fetch("/api/admin/gallery");
+      if (res.ok) {
+        const data = await res.json();
+        if (data.gallery && Array.isArray(data.gallery)) {
+          setGalleryItems(data.gallery);
+          return;
+        }
+      }
+    } catch {
+      // Fallback
+    }
     setGalleryItems([...dataStore.getAllGalleryItems()]);
   };
 
@@ -134,33 +146,37 @@ export default function AdminGalleryCMSPage() {
     }
   };
 
-  const handleSave = (e: React.FormEvent) => {
+  const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!formData.title.trim() || !formData.image.trim()) {
       setUploadError("Title and image are required.");
       return;
     }
 
+    const payload = {
+      title: formData.title,
+      category: formData.category,
+      year: formData.year,
+      location: formData.location,
+      image: formData.image,
+      caption: formData.caption,
+    };
+
     if (editingId) {
       // Update
-      dataStore.updateGalleryItem(editingId, {
-        title: formData.title,
-        category: formData.category,
-        year: formData.year,
-        location: formData.location,
-        image: formData.image,
-        caption: formData.caption,
-      });
+      dataStore.updateGalleryItem(editingId, payload);
     } else {
       // Create
-      dataStore.createGalleryItem({
-        title: formData.title,
-        category: formData.category,
-        year: formData.year,
-        location: formData.location,
-        image: formData.image,
-        caption: formData.caption,
-      });
+      try {
+        await fetch("/api/admin/gallery", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload),
+        });
+      } catch (err: any) {
+        console.warn("API gallery add notice:", err?.message);
+      }
+      dataStore.createGalleryItem(payload);
     }
 
     setIsModalOpen(false);
@@ -169,8 +185,13 @@ export default function AdminGalleryCMSPage() {
     setTimeout(() => setSaveSuccess(false), 3000);
   };
 
-  const handleDelete = (id: string, title: string) => {
+  const handleDelete = async (id: string, title: string) => {
     if (confirm(`Are you sure you want to delete "${title}" from the festival gallery?`)) {
+      try {
+        await fetch(`/api/admin/gallery?id=${encodeURIComponent(id)}`, { method: "DELETE" });
+      } catch (err: any) {
+        console.warn("API gallery delete notice:", err?.message);
+      }
       dataStore.deleteGalleryItem(id);
       loadGallery();
     }

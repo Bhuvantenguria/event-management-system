@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import bcrypt from "bcryptjs";
 import { dataStore } from "@/lib/data-store";
 import { syncWithMongo } from "@/lib/db-sync";
+import { sendWelcomeEmail } from "@/lib/email";
 
 export async function POST(request: Request) {
   try {
@@ -42,6 +43,14 @@ export async function POST(request: Request) {
       college: college || "",
       studentId: studentId || "",
       emailVerified: false,
+    });
+
+    // Ensure write is flushed to MongoDB Atlas
+    await dataStore.flushPending();
+
+    // Trigger welcome notification via Nodemailer (non-blocking)
+    sendWelcomeEmail(newUser.email, newUser.name).catch((err) => {
+      console.warn("Welcome email dispatch notice:", err?.message || err);
     });
 
     return NextResponse.json(

@@ -67,14 +67,14 @@ function renderHeritageTemplate(title: string, contentHtml: string): string {
 <body>
   <div class="container">
     <div class="header">
-      <h1>AffinityAIIMS 2026</h1>
-      <p>Annual Inter-Collegiate Cultural Fest • AIIMS Raebareli</p>
+      <h1>Rangmanch '26</h1>
+      <p>Uttar Pradesh Culture & Heritage College Festival</p>
     </div>
     <div class="body">
       ${contentHtml}
     </div>
     <div class="footer">
-      <p>© 2026 AffinityAIIMS Cultural Committee • AIIMS Raebareli, Uttar Pradesh</p>
+      <p>© 2026 Rangmanch UP Cultural Festival Secretariat</p>
       <p style="color: #DFC283;">A Grand Celebration of Awadhi, Kashi, and Braj Heritage</p>
     </div>
   </div>
@@ -87,7 +87,7 @@ export async function sendMail(
   options: EmailOptions,
   type = "general"
 ): Promise<{ success: boolean; simulated?: boolean; messageId?: string }> {
-  const from = process.env.EMAIL_FROM || '"AffinityAIIMS Fest" <swar@aiimsraebareli.edu.in>';
+  const from = process.env.EMAIL_FROM || '"Rangmanch UP Cultural Fest" <fest.cultural.up@gmail.com>';
   const transporter = createTransporter();
 
   if (!transporter) {
@@ -140,10 +140,10 @@ export async function sendMail(
 // 1. Welcome Email
 export async function sendWelcomeEmail(to: string, name: string) {
   const html = renderHeritageTemplate(
-    "Welcome to AffinityAIIMS 2026",
+    "Welcome to Rangmanch UP 2026",
     `
       <h2 style="font-family: Georgia, serif; color: #702B32;">Pranam ${name},</h2>
-      <p>Welcome to <strong>AffinityAIIMS 2026</strong>! Your participant account has been successfully created.</p>
+      <p>Welcome to <strong>Rangmanch UP 2026</strong>! Your participant account has been successfully created.</p>
       <p>Explore over 40+ competitions across performing arts, athletics, literature, hackathons, and regional crafts.</p>
       <div class="info-box">
         <strong>Important Dates:</strong> 12th – 15th March 2026<br>
@@ -152,7 +152,7 @@ export async function sendWelcomeEmail(to: string, name: string) {
       <a href="${process.env.NEXTAUTH_URL || "http://localhost:3000"}/events" class="btn">Explore All Competitions</a>
     `
   );
-  return sendMail({ to, subject: "Welcome to AffinityAIIMS 2026!", html }, "welcome");
+  return sendMail({ to, subject: "Welcome to Rangmanch UP 2026!", html }, "welcome");
 }
 
 // 2. Payment Approval & Ticket Delivery Email
@@ -214,7 +214,7 @@ export async function sendTestEmail(to: string) {
     "Nodemailer Gmail SMTP Diagnostics",
     `
       <h2 style="font-family: Georgia, serif; color: #702B32;">Gmail SMTP Operational Check</h2>
-      <p>This is a diagnostic notification sent from the <strong>AffinityAIIMS Festival Administration System</strong>.</p>
+      <p>This is a diagnostic notification sent from the <strong>Rangmanch UP 2026 Festival Administration System</strong>.</p>
       <div class="info-box">
         <strong>Host:</strong> ${process.env.SMTP_HOST || "smtp.gmail.com"}<br>
         <strong>Port:</strong> ${process.env.SMTP_PORT || "465"}<br>
@@ -224,5 +224,5 @@ export async function sendTestEmail(to: string) {
       <p>If you received this message, your Gmail SMTP via Nodemailer is functioning perfectly.</p>
     `
   );
-  return sendMail({ to, subject: "AffinityAIIMS: SMTP Test Notification", html }, "smtp_test");
+  return sendMail({ to, subject: "Rangmanch UP 2026: SMTP Test Notification", html }, "smtp_test");
 }

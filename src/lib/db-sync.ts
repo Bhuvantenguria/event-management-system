@@ -16,6 +16,7 @@ import {
   getEventsCollection,
   getGalleryCollection,
   getQrSettingsCollection,
+  ensureMongoIndexes,
 } from "./mongodb";
 
 let isInitialized = false;
@@ -41,8 +42,9 @@ dataStore.setPersistenceHandler(async (collection, filter, data, action = "upser
  * Synchronize in-memory data store with live MongoDB Atlas database.
  * Seeds initial documents if collections are empty.
  */
-export async function syncWithMongo(): Promise<void> {
+export async function syncWithMongo(force = false): Promise<void> {
   if (!process.env.MONGODB_URI || isSyncing) return;
+  if (isInitialized && !force) return;
   isSyncing = true;
 
   try {
@@ -51,6 +53,9 @@ export async function syncWithMongo(): Promise<void> {
       isSyncing = false;
       return;
     }
+
+    // Ensure production indexes exist
+    await ensureMongoIndexes();
 
     // 1. Sync Users
     const usersCol = await getUsersCollection();

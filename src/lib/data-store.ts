@@ -132,6 +132,7 @@ class DataStore {
   };
 
   private persistenceHandler: PersistenceHandler | null = null;
+  private pendingWrites: Promise<void>[] = [];
 
   constructor() {
     this.seedInitialData();
@@ -141,19 +142,25 @@ class DataStore {
     this.persistenceHandler = handler;
   }
 
-  private async persist(
+  public async flushPending(): Promise<void> {
+    if (this.pendingWrites.length === 0) return;
+    const current = [...this.pendingWrites];
+    this.pendingWrites = [];
+    await Promise.allSettled(current);
+  }
+
+  private persist(
     collection: "users" | "registrations" | "payments" | "tickets" | "qr_settings" | "events" | "gallery",
     filter: Record<string, any>,
     data: Record<string, any>,
     action: "upsert" | "delete" = "upsert"
-  ) {
-    if (this.persistenceHandler) {
-      try {
-        await this.persistenceHandler(collection, filter, data, action);
-      } catch (err) {
-        console.error(`MongoDB sync error for ${collection}:`, err);
-      }
-    }
+  ): Promise<void> {
+    if (!this.persistenceHandler) return Promise.resolve();
+    const p = this.persistenceHandler(collection, filter, data, action).catch((err) => {
+      console.error(`MongoDB sync error for ${collection}:`, err);
+    });
+    this.pendingWrites.push(p);
+    return p;
   }
 
   private seedInitialData() {
@@ -168,7 +175,18 @@ class DataStore {
         passwordHash: hashedAdmin,
         role: "admin",
         phone: "+91 98765 00001",
-        college: "AIIMS Raebareli Central Committee",
+        college: "Festival Central Committee",
+        emailVerified: true,
+        createdAt: new Date().toISOString(),
+      },
+      {
+        id: "usr-admin-2",
+        email: "admin@rangmanchfest.in",
+        name: "Super Administrator",
+        passwordHash: hashedAdmin,
+        role: "super_admin",
+        phone: "+91 98765 00002",
+        college: "Rangmanch UP Cultural Secretariat",
         emailVerified: true,
         createdAt: new Date().toISOString(),
       },
@@ -450,7 +468,7 @@ class DataStore {
   createUser(user: Omit<StoredUser, "id" | "createdAt">): StoredUser {
     const newUser: StoredUser = {
       ...user,
-      id: `usr-${Date.now()}`,
+      id: `usr-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`,
       createdAt: new Date().toISOString(),
     };
     this.users.push(newUser);
@@ -495,7 +513,7 @@ class DataStore {
   }
 
   createRegistration(data: Omit<StoredRegistration, "id" | "registrationNumber" | "qrToken" | "createdAt" | "updatedAt">): StoredRegistration {
-    const id = `reg-${Date.now()}`;
+    const id = `reg-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`;
     const token = `RNG-TKT-${Date.now()}-${Math.random().toString(36).substring(2, 7).toUpperCase()}`;
     const newReg: StoredRegistration = {
       ...data,
@@ -577,7 +595,7 @@ class DataStore {
     }
 
     const newPayment: StoredPaymentSubmission = {
-      id: `pay-${Date.now()}`,
+      id: `pay-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`,
       ...data,
       status: "pending",
       createdAt: new Date().toISOString(),
@@ -658,7 +676,7 @@ class DataStore {
   createTicketForRegistration(reg: StoredRegistration): StoredTicket {
     const ticketNumber = `TKT-UP-2026-${Math.floor(1000 + Math.random() * 9000)}`;
     const newTicket: StoredTicket = {
-      id: `tkt-${Date.now()}`,
+      id: `tkt-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`,
       registrationId: reg.id,
       ticketNumber,
       qrToken: reg.qrToken,
@@ -739,7 +757,7 @@ class DataStore {
     return {
       success: true,
       ticket,
-      message: `Verified entry approved for ${ticket.participantName}. Welcome to AffinityAIIMS!`,
+      message: `Verified entry approved for ${ticket.participantName}. Welcome to Rangmanch UP 2026!`,
     };
   }
 
@@ -757,7 +775,7 @@ class DataStore {
   }
 
   createEvent(event: Omit<StoredEvent, "id" | "createdAt">): StoredEvent {
-    const id = event.slug || `ev-${Date.now()}`;
+    const id = event.slug || `ev-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`;
     const newEvent: StoredEvent = {
       ...event,
       id,
@@ -806,7 +824,7 @@ class DataStore {
   }
 
   createGalleryItem(item: Omit<StoredGalleryItem, "id" | "createdAt">): StoredGalleryItem {
-    const id = `gal-${Date.now()}`;
+    const id = `gal-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`;
     const newItem: StoredGalleryItem = {
       ...item,
       id,
@@ -852,6 +870,4 @@ declare global {
 }
 
 export const dataStore = global.__globalStore || new DataStore();
-if (process.env.NODE_ENV !== "production") {
-  global.__globalStore = dataStore;
-}
+global.__globalStore = dataStore;

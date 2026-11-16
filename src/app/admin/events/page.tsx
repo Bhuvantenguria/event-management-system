@@ -66,7 +66,19 @@ export default function AdminEventsPage() {
   const [uploadError, setUploadError] = useState("");
   const [saveSuccess, setSaveSuccess] = useState(false);
 
-  const loadEvents = () => {
+  const loadEvents = async () => {
+    try {
+      const res = await fetch("/api/admin/events");
+      if (res.ok) {
+        const data = await res.json();
+        if (data.events && Array.isArray(data.events)) {
+          setEventsList(data.events);
+          return;
+        }
+      }
+    } catch {
+      // Fallback
+    }
     setEventsList([...dataStore.getAllEvents()]);
   };
 
@@ -219,7 +231,7 @@ export default function AdminEventsPage() {
     }));
   };
 
-  const handleSaveEvent = (e: React.FormEvent) => {
+  const handleSaveEvent = async (e: React.FormEvent) => {
     e.preventDefault();
     const slug = formData.slug.trim() || formData.title.toLowerCase().replace(/[^a-z0-9]+/g, "-");
     const rulesList = formData.rules
@@ -230,46 +242,49 @@ export default function AdminEventsPage() {
     const imagesToSave = formData.images.length > 0 ? formData.images : [formData.poster];
     const posterToSave = formData.poster || imagesToSave[0];
 
+    const eventPayload = {
+      title: formData.title,
+      slug,
+      category: formData.category,
+      categoryKey: formData.categoryKey,
+      club: formData.club,
+      description: formData.description,
+      date: formData.date,
+      time: formData.time,
+      venue: formData.venue,
+      registrationFee: Number(formData.registrationFee) || 0,
+      teamSize: formData.teamSize,
+      prizePool: formData.prizePool,
+      poster: posterToSave,
+      images: imagesToSave,
+      status: formData.status,
+      rules: rulesList,
+    };
+
     if (editingEventId) {
       // Update
-      dataStore.updateEvent(editingEventId, {
-        title: formData.title,
-        slug,
-        category: formData.category,
-        categoryKey: formData.categoryKey,
-        club: formData.club,
-        description: formData.description,
-        date: formData.date,
-        time: formData.time,
-        venue: formData.venue,
-        registrationFee: Number(formData.registrationFee) || 0,
-        teamSize: formData.teamSize,
-        prizePool: formData.prizePool,
-        poster: posterToSave,
-        images: imagesToSave,
-        status: formData.status,
-        rules: rulesList,
-      });
+      try {
+        await fetch("/api/admin/events", {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ id: editingEventId, ...eventPayload }),
+        });
+      } catch (err: any) {
+        console.warn("API event update notice:", err?.message);
+      }
+      dataStore.updateEvent(editingEventId, eventPayload);
     } else {
       // Create
-      dataStore.createEvent({
-        title: formData.title,
-        slug,
-        category: formData.category,
-        categoryKey: formData.categoryKey,
-        club: formData.club,
-        description: formData.description,
-        date: formData.date,
-        time: formData.time,
-        venue: formData.venue,
-        registrationFee: Number(formData.registrationFee) || 0,
-        teamSize: formData.teamSize,
-        prizePool: formData.prizePool,
-        poster: posterToSave,
-        images: imagesToSave,
-        status: formData.status,
-        rules: rulesList,
-      });
+      try {
+        await fetch("/api/admin/events", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(eventPayload),
+        });
+      } catch (err: any) {
+        console.warn("API event create notice:", err?.message);
+      }
+      dataStore.createEvent(eventPayload);
     }
 
     setIsModalOpen(false);
@@ -278,17 +293,31 @@ export default function AdminEventsPage() {
     setTimeout(() => setSaveSuccess(false), 3000);
   };
 
-  const handleToggleStatus = (id: string) => {
+  const handleToggleStatus = async (id: string) => {
     const ev = dataStore.getEventById(id);
     if (!ev) return;
     const newStatus =
       ev.status === "Registration Open" ? "Registration Closed" : "Registration Open";
+    try {
+      await fetch("/api/admin/events", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id, status: newStatus }),
+      });
+    } catch (err: any) {
+      console.warn("API toggle status notice:", err?.message);
+    }
     dataStore.updateEvent(id, { status: newStatus });
     loadEvents();
   };
 
-  const handleDeleteEvent = (id: string, title: string) => {
+  const handleDeleteEvent = async (id: string, title: string) => {
     if (confirm(`Are you sure you want to delete event "${title}"? This cannot be undone.`)) {
+      try {
+        await fetch(`/api/admin/events?id=${encodeURIComponent(id)}`, { method: "DELETE" });
+      } catch (err: any) {
+        console.warn("API delete event notice:", err?.message);
+      }
       dataStore.deleteEvent(id);
       loadEvents();
     }

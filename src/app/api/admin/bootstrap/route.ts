@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import bcrypt from "bcryptjs";
 import { dataStore } from "@/lib/data-store";
+import { syncWithMongo } from "@/lib/db-sync";
 
 export async function POST(request: Request) {
   try {
@@ -16,6 +17,8 @@ export async function POST(request: Request) {
       );
     }
 
+    await syncWithMongo();
+
     const adminEmail = (email || "admin@aiimsraebareli.edu.in").toLowerCase().trim();
     const existing = dataStore.getUserByEmail(adminEmail);
 
@@ -24,6 +27,7 @@ export async function POST(request: Request) {
       if (password) {
         existing.passwordHash = await bcrypt.hash(password, 10);
       }
+      await dataStore.flushPending();
       return NextResponse.json({
         success: true,
         message: `Super Admin account '${adminEmail}' updated successfully.`,
@@ -42,6 +46,8 @@ export async function POST(request: Request) {
       college: "Festival Central Secretariat",
       emailVerified: true,
     });
+
+    await dataStore.flushPending();
 
     return NextResponse.json({
       success: true,

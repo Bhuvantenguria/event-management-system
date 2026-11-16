@@ -46,7 +46,21 @@ export default function AdminPaymentsApprovalPage() {
 
   const [notification, setNotification] = useState<{ type: string; message: string } | null>(null);
 
-  const loadData = () => {
+  const loadData = async () => {
+    try {
+      const res = await fetch("/api/admin/payments");
+      if (res.ok) {
+        const data = await res.json();
+        if (data.payments && Array.isArray(data.payments)) {
+          setPayments(data.payments);
+          setEvents([...dataStore.getAllEvents()]);
+          return;
+        }
+      }
+    } catch {
+      // Fallback to local store for offline development
+    }
+
     const all = dataStore.getAllPayments().map((p) => ({
       ...p,
       registration: dataStore.getRegistrationById(p.registrationId),
@@ -66,19 +80,27 @@ export default function AdminPaymentsApprovalPage() {
   };
 
   // Quick 1-click Approve
-  const handleDirectApprove = (paymentId: string, participantName: string) => {
-    const success = dataStore.reviewPayment(paymentId, "usr-finance-admin-1", "approve");
-    if (success) {
-      loadData();
-      if (selectedProof?.id === paymentId) {
-        setSelectedProof(null);
-      }
-      setNotification({
-        type: "success",
-        message: `Payment approved for ${participantName}! Registration is confirmed and digital ticket has been issued.`,
+  const handleDirectApprove = async (paymentId: string, participantName: string) => {
+    try {
+      await fetch("/api/admin/payments", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ paymentId, action: "approve" }),
       });
-      setTimeout(() => setNotification(null), 4000);
+    } catch (err: any) {
+      console.warn("API approve notice:", err?.message);
     }
+
+    dataStore.reviewPayment(paymentId, "usr-finance-admin-1", "approve");
+    loadData();
+    if (selectedProof?.id === paymentId) {
+      setSelectedProof(null);
+    }
+    setNotification({
+      type: "success",
+      message: `Payment approved for ${participantName}! Registration is confirmed and digital ticket has been issued.`,
+    });
+    setTimeout(() => setNotification(null), 4000);
   };
 
   // Open modal for Reject or Resubmit with custom explanation
@@ -94,8 +116,22 @@ export default function AdminPaymentsApprovalPage() {
     });
   };
 
-  const submitActionModal = (e: React.FormEvent) => {
+  const submitActionModal = async (e: React.FormEvent) => {
     e.preventDefault();
+    try {
+      await fetch("/api/admin/payments", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          paymentId: reviewModal.paymentId,
+          action: reviewModal.action,
+          rejectionReason: reviewModal.reason,
+        }),
+      });
+    } catch (err: any) {
+      console.warn("API review notice:", err?.message);
+    }
+
     dataStore.reviewPayment(
       reviewModal.paymentId,
       "usr-finance-admin-1",
