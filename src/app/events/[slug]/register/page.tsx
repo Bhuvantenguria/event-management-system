@@ -146,8 +146,9 @@ export default function EventRegistrationPage({ params }: { params: { slug: stri
       }
 
       if (event.registrationFee > 0) {
-        // Redirect to Paytm QR payment page
-        router.push("/dashboard/payments");
+        // Redirect to Paytm QR payment page with specific registration pre-selected
+        const regParam = data.registration?.id ? `?regId=${encodeURIComponent(data.registration.id)}&event=${encodeURIComponent(event.slug)}` : `?event=${encodeURIComponent(event.slug)}`;
+        router.push(`/dashboard/payments${regParam}`);
       } else {
         // Free event -> Go directly to tickets
         router.push("/dashboard/tickets");

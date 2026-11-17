@@ -15,8 +15,14 @@ export async function POST(request: Request) {
 
   try {
     const body = await request.json();
-    const {
+    let {
       registrationId,
+      eventId,
+      eventSlug,
+      eventTitle,
+      participationType,
+      teamName,
+      teamMembers,
       amountSubmitted,
       utrNumber,
       paymentScreenshotUrl,
@@ -25,19 +31,66 @@ export async function POST(request: Request) {
       notes,
     } = body;
 
-    if (!registrationId || !utrNumber || !paymentScreenshotUrl) {
+    if (!utrNumber || !paymentScreenshotUrl) {
       return NextResponse.json(
-        { error: "Missing required fields: registrationId, utrNumber, and payment screenshot proof are required." },
+        { error: "12-digit UTR number and payment receipt screenshot proof are required." },
+        { status: 400 }
+      );
+    }
+
+    if (!registrationId && !eventId && !eventSlug) {
+      return NextResponse.json(
+        { error: "Please select an event registration or event to submit payment proof for." },
         { status: 400 }
       );
     }
 
     await syncWithMongo();
 
-    const reg = dataStore.getRegistrationById(registrationId);
+    let reg = registrationId ? dataStore.getRegistrationById(registrationId) : undefined;
+
+    // If registrationId wasn't found or was an event ID/slug, create or locate the registration
+    if (!reg && (eventId || eventSlug || (registrationId && registrationId.startsWith("event:")))) {
+      const targetSlug = (eventSlug || eventId || registrationId.replace(/^event:/, "")).trim();
+      const ev = dataStore.getEventBySlug(targetSlug) || dataStore.getEventById(targetSlug);
+      const evTitle = ev?.title || eventTitle || targetSlug;
+      const evFee = ev ? ev.registrationFee : (Number(amountSubmitted) || 0);
+
+      const userId = (session.user as any).id || `usr-${Date.now()}`;
+      const userName = session.user.name || "Participant";
+      const userEmail = session.user.email;
+      const college = (session.user as any).college || "College Participant";
+
+      // Check if user already registered for this event
+      const existing = dataStore
+        .getRegistrationsByUser(userId)
+        .find((r) => (r.eventId === targetSlug || r.eventId === ev?.id) && r.registrationStatus !== "cancelled");
+
+      if (existing) {
+        reg = existing;
+        registrationId = existing.id;
+      } else {
+        reg = dataStore.createRegistration({
+          eventId: ev?.id || targetSlug,
+          eventTitle: evTitle,
+          userId,
+          userName,
+          userEmail,
+          college,
+          participationType: participationType || "individual",
+          teamName: teamName || undefined,
+          teamMembers: teamMembers || undefined,
+          amount: evFee,
+          paymentStatus: "pending_verification",
+          registrationStatus: "pending",
+        });
+        registrationId = reg.id;
+      }
+    }
+
     if (!reg) {
       return NextResponse.json(
-        { error: "Event registration not found." },
+        { error: "Event registration not found. Please select an event to register." },
         { status: 404 }
       );
     }

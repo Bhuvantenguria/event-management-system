@@ -511,8 +511,12 @@ class DataStore {
   }
 
   // Registrations
-  getRegistrationsByUser(userId: string): StoredRegistration[] {
-    return this.registrations.filter((r) => r.userId === userId);
+  getRegistrationsByUser(userIdOrEmail: string): StoredRegistration[] {
+    if (!userIdOrEmail) return [];
+    const term = userIdOrEmail.toLowerCase();
+    return this.registrations.filter(
+      (r) => r.userId === userIdOrEmail || (r.userEmail && r.userEmail.toLowerCase() === term)
+    );
   }
 
   getAllRegistrations(): StoredRegistration[] {

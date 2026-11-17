@@ -32,6 +32,37 @@ export async function POST(request: Request) {
   }
 }
 
+export async function PUT(request: Request) {
+  const session = await getServerSession(authOptions);
+  const role = (session?.user as any)?.role;
+
+  if (!hasRole(role, ["admin", "super_admin"])) {
+    return NextResponse.json({ error: "Forbidden: Administrator privilege required." }, { status: 403 });
+  }
+
+  try {
+    const body = await request.json();
+    const { id, ...updates } = body;
+
+    if (!id) {
+      return NextResponse.json({ error: "Gallery item ID is required." }, { status: 400 });
+    }
+
+    await syncWithMongo();
+
+    const updated = dataStore.updateGalleryItem(id, updates);
+    if (!updated) {
+      return NextResponse.json({ error: "Gallery item not found." }, { status: 404 });
+    }
+
+    await dataStore.flushPending();
+
+    return NextResponse.json({ success: true, item: updated });
+  } catch (error: any) {
+    return NextResponse.json({ error: error?.message || "Failed to update gallery item" }, { status: 500 });
+  }
+}
+
 export async function DELETE(request: Request) {
   const session = await getServerSession(authOptions);
   const role = (session?.user as any)?.role;

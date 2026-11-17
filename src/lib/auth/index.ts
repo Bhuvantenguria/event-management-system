@@ -128,6 +128,14 @@ export const authOptions: NextAuthOptions = {
       }
       return session;
     },
+    async redirect({ url, baseUrl }) {
+      if (url.startsWith("/")) return `${baseUrl}${url}`;
+      try {
+        const urlObj = new URL(url);
+        if (urlObj.origin === baseUrl) return url;
+      } catch {}
+      return baseUrl || "/";
+    },
   },
   secret: process.env.NEXTAUTH_SECRET || "affinity-aiims-secret-key-2026-prod",
 };

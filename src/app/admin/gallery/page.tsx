@@ -164,6 +164,15 @@ export default function AdminGalleryCMSPage() {
 
     if (editingId) {
       // Update
+      try {
+        await fetch("/api/admin/gallery", {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ id: editingId, ...payload }),
+        });
+      } catch (err: any) {
+        console.warn("API gallery update notice:", err?.message);
+      }
       dataStore.updateGalleryItem(editingId, payload);
     } else {
       // Create
