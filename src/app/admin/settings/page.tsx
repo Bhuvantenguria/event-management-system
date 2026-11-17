@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { dataStore } from "@/lib/data-store";
 import {
   Settings,
@@ -30,6 +30,21 @@ export default function AdminSettingsPage() {
   const [saved, setSaved] = useState(false);
   const [isUploadingQr, setIsUploadingQr] = useState(false);
   const [uploadError, setUploadError] = useState("");
+
+  useEffect(() => {
+    fetch("/api/admin/qr-settings")
+      .then((res) => res.json())
+      .then((data) => {
+        if (data.qrSettings) {
+          if (data.qrSettings.upiId) setUpiId(data.qrSettings.upiId);
+          if (data.qrSettings.upiName) setUpiName(data.qrSettings.upiName);
+          if (data.qrSettings.qrImageUrl) setQrImageUrl(data.qrSettings.qrImageUrl);
+          if (data.qrSettings.paymentInstructions) setPaymentInstructions(data.qrSettings.paymentInstructions);
+          if (data.qrSettings.isEnabled !== undefined) setIsEnabled(data.qrSettings.isEnabled);
+        }
+      })
+      .catch(() => {});
+  }, []);
 
   const handleQrUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];

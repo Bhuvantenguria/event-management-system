@@ -141,10 +141,10 @@ export default function LoginPage() {
             <LotusOrnament className="w-6 h-6 text-heritage-gold" />
           </div>
           <h1 className="font-serif text-3xl font-black text-foreground">
-            Rangmanch<span className="gold-gradient-text">'26</span>
+            Affinity<span className="gold-gradient-text">AIIMS</span>
           </h1>
           <p className="text-xs sm:text-sm text-muted-foreground font-sans">
-            Festival Portal Login
+            AIIMS Raebareli Cultural Fest Portal • Sign In
           </p>
         </div>
 

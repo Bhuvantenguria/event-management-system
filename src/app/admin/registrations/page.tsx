@@ -33,7 +33,18 @@ export default function AdminRegistrationsPage() {
   // Inspect Modal
   const [selectedReg, setSelectedReg] = useState<StoredRegistration | null>(null);
 
-  const loadData = () => {
+  const loadData = async () => {
+    try {
+      const res = await fetch("/api/admin/registrations");
+      if (res.ok) {
+        const data = await res.json();
+        if (data.registrations && Array.isArray(data.registrations)) {
+          setRegistrations(data.registrations);
+          setEvents([...dataStore.getAllEvents()]);
+          return;
+        }
+      }
+    } catch {}
     setRegistrations([...dataStore.getAllRegistrations()]);
     setEvents([...dataStore.getAllEvents()]);
   };

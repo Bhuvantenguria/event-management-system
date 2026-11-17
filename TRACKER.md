@@ -376,6 +376,63 @@
     - `npx vitest run`: 16/16 tests passing across 6 test suites.
     - `npm run build`: 40/40 routes compiled cleanly with exit code 0.
 
+---
+
+### Phase 16: Final Testing & Comprehensive Issue Resolution (Admin & User Journeys)
+- **Status**: Completed
+- **Why**: Perform thorough end-to-end testing across both Administrator and Participant user journeys, eliminate all stale client-side state assumptions, wire real-time server & MongoDB synchronizations, enforce security guards, and validate 100% test coverage and production compilation.
+- **Key Issues Identified & Resolved**:
+  1. **Webpack Production Caching File Lock on Windows (`next.config.js`)**:
+     - *Issue*: During `next build` on Windows, webpack's default filesystem pack caching encountered concurrency locks resulting in `EPERM: operation not permitted, mkdir`.
+     - *Fix*: Set `config.cache = false` during production builds in `next.config.js`, enabling clean compilation of all routes.
+  2. **Participant Dashboard Data Store Synchronization (`src/app/dashboard/*`)**:
+     - *Issue*: Dashboard overview, registrations, and tickets were reading synchronously from `dataStore` on client render rather than querying user API routes, causing new registrations created on the server/MongoDB to not appear immediately in the client UI.
+     - *Fixes*:
+       - `src/app/dashboard/page.tsx`: Rewritten with `useState` and `useEffect` to query `/api/user/registrations` and `/api/user/tickets`. Added real-time KPI counts, dynamic registration rows, and loading spinner.
+       - `src/app/dashboard/registrations/page.tsx`: Dynamically fetches `/api/user/registrations`, displaying accurate statuses ("Payment Approved & Ticket Issued", "Pending Review", "Resubmission Requested"). Added direct "Submit UPI Proof" / "Resubmit Proof" links with `regId` pre-population.
+       - `src/app/dashboard/tickets/page.tsx`: Dynamically fetches `/api/user/tickets` and computes live SVG/canvas QR passes using `QRCode.toDataURL`. Added individual ticket download (`.png`) and batch print functionality.
+       - `src/app/dashboard/profile/page.tsx`: Automatically populates student credentials (name, phone, college, student ID) from `/api/user/profile` on mount.
+       - `src/app/dashboard/payments/page.tsx`: Integrated `/api/user/payments` tracking and built a dedicated "Your Payment Proof Submissions & Verification History" section with live status badges, admin feedback notes, and receipt screenshot lightbox preview.
+  3. **Admin Dashboard Real-Time Backend Connectivity (`src/app/admin/*`)**:
+     - *Issue*: Overview KPI counters and registrations list were not querying server APIs on mount.
+     - *Fixes*:
+       - `src/app/admin/page.tsx`: Added `useEffect` querying `/api/admin/overview` to dynamically update active events, total registrations, pending review count, approved count, and verified revenue.
+       - `src/app/admin/registrations/page.tsx`: Enhanced `loadData()` to query `/api/admin/registrations` with CSV export and roster inspection.
+       - `src/app/admin/settings/page.tsx`: Added `useEffect` querying `/api/admin/qr-settings` on mount and added `await syncWithMongo();` to `/api/admin/qr-settings` POST.
+  4. **Dynamic Event & Media Resolution (`src/app/events/*`, `src/app/gallery/*`)**:
+     - *Issue*: Custom events and gallery photos added by administrators were not immediately loaded by public catalog and detail pages if the client cache had not refreshed.
+     - *Fixes*:
+       - `src/app/events/page.tsx`: Added `/api/events` fetch in `useEffect` to merge custom admin competitions with featured events.
+       - `src/app/events/[slug]/page.tsx`: Converted `EventDetailPage` to `async` with `await syncWithMongo();` so new events in MongoDB resolve seamlessly.
+       - `src/app/events/[slug]/register/page.tsx`: Added dynamic `/api/events` fetching so custom events populate registration fee and squad limits accurately.
+       - `src/app/gallery/page.tsx`: Added `/api/gallery` fetch in `useEffect` so newly added and updated photos reflect on the public page.
+  5. **Authentication & Role Authorization Guards (`src/app/admin/layout.tsx`, `src/app/dashboard/layout.tsx`)**:
+     - *Issue*: Unauthenticated guests accessing `/dashboard` or `/admin` were not redirected to `/login`, and participants accessing `/admin` were not greeted with an access restriction notice.
+     - *Fixes*:
+       - Added authentication loading states and automatic redirection to `/login?callbackUrl=...`.
+       - Added role-based access check on `/admin`: Non-administrators are presented with a styled "Access Restricted: Administrator Privileges Required" guard with options to switch accounts or return to the participant portal.
+       - Rebranded `/login` heading from `Rangmanch '26` to `AffinityAIIMS '26`.
+  6. **Comprehensive Automated Test Suite (`src/__tests__/admin-and-user-full-testing.test.ts`)**:
+     - Created 14 extensive end-to-end test specifications covering:
+       - User registration, password hashing & verification
+       - User profile update and password change
+       - Individual and team registration with squad rosters
+       - Free event instant ticket issuance
+       - Paytm UPI proof submission with 12-digit UTR
+       - Strict UTR uniqueness enforcement
+       - Admin RBAC validation
+       - Overview metrics aggregation
+       - Event creation with multiple pictures, status toggle, and deletion
+       - 1-click payment approval with automatic ticket generation
+       - Payment resubmission requests with admin explanation
+       - Full gallery media CRUD
+       - Organizer Paytm QR configuration update
+- **Final Verification**:
+  - `npx tsc --noEmit`: 0 TypeScript errors.
+  - `npx vitest run`: 37/37 tests passing across all 8 test suites (100% pass rate).
+  - Production build: Successfully compiled across all dynamic and static routes.
+
+
 
 
 

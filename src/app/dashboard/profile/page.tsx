@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useSession } from "next-auth/react";
 import { dataStore } from "@/lib/data-store";
 import {
@@ -13,6 +13,7 @@ import {
   CheckCircle2,
   AlertCircle,
   FileCheck,
+  Loader2,
 } from "lucide-react";
 
 export default function ParticipantProfilePage() {
@@ -23,8 +24,8 @@ export default function ParticipantProfilePage() {
 
   const [name, setName] = useState(storedUser?.name || user?.name || "");
   const [phone, setPhone] = useState(storedUser?.phone || "");
-  const [college, setCollege] = useState(storedUser?.college || "");
-  const [studentId, setStudentId] = useState(storedUser?.studentId || "");
+  const [college, setCollege] = useState(storedUser?.college || (user as any)?.college || "");
+  const [studentId, setStudentId] = useState(storedUser?.studentId || (user as any)?.studentId || "");
 
   const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
@@ -34,6 +35,20 @@ export default function ParticipantProfilePage() {
     null
   );
   const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    fetch("/api/user/profile")
+      .then((res) => res.json())
+      .then((data) => {
+        if (data.user) {
+          if (data.user.name) setName(data.user.name);
+          if (data.user.phone) setPhone(data.user.phone);
+          if (data.user.college) setCollege(data.user.college);
+          if (data.user.studentId) setStudentId(data.user.studentId);
+        }
+      })
+      .catch(() => {});
+  }, [userEmail]);
 
   const handleUpdateProfile = async (e: React.FormEvent) => {
     e.preventDefault();

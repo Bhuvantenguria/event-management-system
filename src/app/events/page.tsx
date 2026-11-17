@@ -123,20 +123,30 @@ export default function EventsCatalogPage() {
   const [eventsList, setEventsList] = useState<any[]>(ALL_EVENTS);
 
   useEffect(() => {
-    const storeEvents = dataStore.getAllEvents();
-    const map = new Map<string, any>();
-    // Preload all store events first so newly created events appear
-    for (const ev of storeEvents) {
-      map.set(ev.slug || ev.id, ev);
-    }
-    // Merge fallback static events if not already existing
-    for (const ev of ALL_EVENTS) {
-      const key = ev.slug || ev.id;
-      if (!map.has(key)) {
-        map.set(key, ev);
+    const updateEvents = (sourceList: any[]) => {
+      const map = new Map<string, any>();
+      for (const ev of sourceList) {
+        map.set(ev.slug || ev.id, ev);
       }
-    }
-    setEventsList(Array.from(map.values()));
+      for (const ev of ALL_EVENTS) {
+        const key = ev.slug || ev.id;
+        if (!map.has(key)) {
+          map.set(key, ev);
+        }
+      }
+      setEventsList(Array.from(map.values()));
+    };
+
+    updateEvents(dataStore.getAllEvents());
+
+    fetch("/api/events")
+      .then((res) => res.json())
+      .then((data) => {
+        if (data.events && Array.isArray(data.events)) {
+          updateEvents(data.events);
+        }
+      })
+      .catch(() => {});
   }, []);
 
   const filteredEvents = eventsList.filter((event) => {

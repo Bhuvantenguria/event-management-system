@@ -35,6 +35,8 @@ function PaymentsContent() {
 
   const [registrations, setRegistrations] = useState<StoredRegistration[]>([]);
   const [availableEvents, setAvailableEvents] = useState<StoredEvent[]>([]);
+  const [userPayments, setUserPayments] = useState<any[]>([]);
+  const [previewReceiptUrl, setPreviewReceiptUrl] = useState<string | null>(null);
   const [qrSettings, setQrSettings] = useState({
     upiId: "festpay@ptaxis",
     upiName: "Parampara Fest Committee",
@@ -68,10 +70,11 @@ function PaymentsContent() {
   const loadInitialData = async () => {
     setIsLoadingData(true);
     try {
-      const [regsRes, qrRes, eventsRes] = await Promise.allSettled([
+      const [regsRes, qrRes, eventsRes, paymentsRes] = await Promise.allSettled([
         fetch("/api/user/registrations", { cache: "no-store" }),
         fetch("/api/qr-settings", { cache: "no-store" }),
         fetch("/api/events", { cache: "no-store" }),
+        fetch("/api/user/payments", { cache: "no-store" }),
       ]);
 
       let userRegs: StoredRegistration[] = [];
@@ -106,6 +109,23 @@ function PaymentsContent() {
       } else {
         evList = dataStore.getAllEvents();
         setAvailableEvents(evList);
+      }
+
+      if (paymentsRes.status === "fulfilled" && paymentsRes.value.ok) {
+        const data = await paymentsRes.value.json();
+        if (data.payments && Array.isArray(data.payments)) {
+          setUserPayments(data.payments);
+        }
+      } else {
+        const regIds = new Set(userRegs.map((r) => r.id));
+        const allPayments = dataStore
+          .getAllPayments()
+          .filter((p) => regIds.has(p.registrationId))
+          .map((p) => ({
+            ...p,
+            registration: userRegs.find((r) => r.id === p.registrationId),
+          }));
+        setUserPayments(allPayments);
       }
 
       // Automatically select appropriate key:
@@ -680,6 +700,157 @@ function PaymentsContent() {
           </form>
         </div>
       </div>
+
+      {/* Payment Proof Submissions & Verification History */}
+      <div className="bg-card rounded-2xl border border-fest-gold/30 p-6 sm:p-8 shadow-md space-y-5">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between border-b border-border pb-3 gap-2">
+          <div>
+            <h2 className="font-serif text-xl font-bold text-foreground flex items-center">
+              <CreditCard className="w-5 h-5 mr-2 text-fest-sunset" />
+              Your Payment Proof Submissions &amp; Status
+            </h2>
+            <p className="text-xs text-muted-foreground font-sans mt-0.5">
+              Live tracking of your submitted Paytm UPI transactions and administrative audit feedback
+            </p>
+          </div>
+          <span className="text-xs font-mono font-bold text-fest-sunset bg-fest-sunset/10 px-3 py-1 rounded-full border border-fest-sunset/30 self-start sm:self-auto">
+            {userPayments.length} Submission{userPayments.length === 1 ? "" : "s"}
+          </span>
+        </div>
+
+        {userPayments.length === 0 ? (
+          <div className="text-center py-10 text-muted-foreground text-xs font-sans">
+            <Clock className="w-8 h-8 text-muted-foreground/60 mx-auto mb-2" />
+            <p className="font-semibold text-foreground">No payment proofs submitted yet.</p>
+            <p className="mt-0.5">When you submit your 12-digit UTR and payment screenshot above, you can monitor verification status here.</p>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {userPayments.map((p) => (
+              <div
+                key={p.id}
+                className="p-4 rounded-xl border border-fest-gold/30 bg-background hover:border-fest-sunset transition-all space-y-3"
+              >
+                <div className="flex items-start justify-between gap-2">
+                  <div>
+                    <span className="text-[10px] uppercase font-bold text-muted-foreground block">
+                      {p.registration?.registrationNumber || p.registrationId}
+                    </span>
+                    <h3 className="font-serif font-bold text-sm text-foreground">
+                      {p.registration?.eventTitle || "Festival Event"}
+                    </h3>
+                  </div>
+
+                  <span
+                    className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-bold ${
+                      p.status === "approved"
+                        ? "bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30"
+                        : p.status === "pending"
+                        ? "bg-amber-500/15 text-amber-600 dark:text-amber-400 border border-amber-500/30"
+                        : p.status === "resubmission_required"
+                        ? "bg-amber-600/15 text-amber-500 border border-amber-500/40"
+                        : "bg-destructive/15 text-destructive border border-destructive/30"
+                    }`}
+                  >
+                    {p.status === "approved" && <CheckCircle2 className="w-3 h-3 mr-1" />}
+                    {p.status === "pending" && <Clock className="w-3 h-3 mr-1" />}
+                    {p.status === "resubmission_required" && <AlertTriangle className="w-3 h-3 mr-1" />}
+                    {p.status === "rejected" && <X className="w-3 h-3 mr-1" />}
+                    {p.status === "approved"
+                      ? "Approved (Ticket Issued)"
+                      : p.status === "pending"
+                      ? "Pending Finance Audit"
+                      : p.status === "resubmission_required"
+                      ? "Resubmission Requested"
+                      : "Rejected"}
+                  </span>
+                </div>
+
+                <div className="grid grid-cols-2 gap-2 text-xs font-sans">
+                  <div>
+                    <span className="text-[10px] text-muted-foreground block">12-Digit UTR:</span>
+                    <span className="font-mono font-bold text-foreground">{p.utrNumber}</span>
+                  </div>
+                  <div>
+                    <span className="text-[10px] text-muted-foreground block">Amount Verified:</span>
+                    <span className="font-serif font-black text-fest-sunset">{formatCurrency(p.amountSubmitted)}</span>
+                  </div>
+                  <div>
+                    <span className="text-[10px] text-muted-foreground block">Submitted On:</span>
+                    <span className="text-foreground">{formatDate(p.createdAt || p.paymentDate)}</span>
+                  </div>
+                  <div>
+                    <span className="text-[10px] text-muted-foreground block">Receipt Proof:</span>
+                    {p.paymentScreenshotUrl ? (
+                      <button
+                        type="button"
+                        onClick={() => setPreviewReceiptUrl(p.paymentScreenshotUrl)}
+                        className="text-fest-sunset hover:underline inline-flex items-center text-[11px] font-semibold cursor-pointer"
+                      >
+                        <Eye className="w-3 h-3 mr-1" />
+                        View Screenshot
+                      </button>
+                    ) : (
+                      <span className="text-muted-foreground text-[11px]">No image</span>
+                    )}
+                  </div>
+                </div>
+
+                {p.rejectionReason && (
+                  <div className="p-2.5 rounded-lg bg-destructive/10 border border-destructive/20 text-[11px] text-destructive space-y-0.5">
+                    <span className="font-bold block">Finance Admin Feedback:</span>
+                    <p>{p.rejectionReason}</p>
+                  </div>
+                )}
+
+                {p.status === "approved" && (
+                  <div className="pt-1">
+                    <Link
+                      href="/dashboard/tickets"
+                      className="inline-flex items-center text-xs font-bold text-emerald-600 dark:text-emerald-400 hover:underline"
+                    >
+                      <Sparkles className="w-3.5 h-3.5 mr-1" />
+                      View Your Digital Entry QR Ticket →
+                    </Link>
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* Lightbox Receipt Preview Modal */}
+      {previewReceiptUrl && (
+        <div
+          className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4"
+          onClick={() => setPreviewReceiptUrl(null)}
+        >
+          <div
+            className="relative max-w-2xl w-full bg-card rounded-2xl border-2 border-fest-gold p-4 overflow-hidden"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between pb-3 border-b border-border">
+              <h3 className="font-serif text-sm font-bold text-foreground">
+                Payment Receipt Proof
+              </h3>
+              <button
+                onClick={() => setPreviewReceiptUrl(null)}
+                className="p-1 rounded-md text-muted-foreground hover:text-foreground"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            <div className="py-4 flex justify-center">
+              <img
+                src={previewReceiptUrl}
+                alt="Receipt Proof"
+                className="max-h-[70vh] w-auto object-contain rounded-lg border border-border"
+              />
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

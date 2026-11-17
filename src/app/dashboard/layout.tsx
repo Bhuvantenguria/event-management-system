@@ -2,7 +2,7 @@
 
 import React from "react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { useSession, signOut } from "next-auth/react";
 import {
   LayoutDashboard,
@@ -14,6 +14,7 @@ import {
   LogOut,
   Sparkles,
   ChevronRight,
+  Loader2,
 } from "lucide-react";
 import { LotusOrnament } from "@/components/ui/heritage-decorations";
 
@@ -26,12 +27,32 @@ const DASHBOARD_LINKS = [
 ];
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
+  const router = useRouter();
   const pathname = usePathname();
   const { data: session, status } = useSession();
+
+  React.useEffect(() => {
+    if (status === "unauthenticated") {
+      router.push(`/login?callbackUrl=${encodeURIComponent(pathname)}`);
+    }
+  }, [status, pathname, router]);
 
   const user = session?.user;
   const role = (user as any)?.role;
   const isAdmin = role && ["admin", "super_admin"].includes(role);
+
+  if (status === "loading") {
+    return (
+      <div className="min-h-screen bg-background flex flex-col items-center justify-center p-4">
+        <Loader2 className="w-8 h-8 animate-spin text-fest-sunset mb-2" />
+        <span className="text-xs text-muted-foreground font-sans">Verifying participant session...</span>
+      </div>
+    );
+  }
+
+  if (status === "unauthenticated") {
+    return null;
+  }
 
   return (
     <div className="min-h-screen bg-background flex flex-col md:flex-row">

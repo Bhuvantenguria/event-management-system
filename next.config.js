@@ -20,7 +20,10 @@ const nextConfig = {
   experimental: {
     serverComponentsExternalPackages: ["mongodb", "nodemailer", "bcryptjs"],
   },
-  webpack: (config, { isServer }) => {
+  webpack: (config, { isServer, dev }) => {
+    if (!dev) {
+      config.cache = false;
+    }
     if (!isServer) {
       config.resolve.fallback = {
         ...config.resolve.fallback,

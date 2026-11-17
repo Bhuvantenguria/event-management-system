@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from "react";
 import { useSession } from "next-auth/react";
+import { useRouter } from "next/navigation";
 import QRCode from "qrcode";
 import { dataStore, StoredTicket } from "@/lib/data-store";
 import {
@@ -15,15 +16,44 @@ import {
   ShieldCheck,
   CheckCircle2,
   Sparkles,
+  Loader2,
 } from "lucide-react";
 import { LotusOrnament } from "@/components/ui/heritage-decorations";
 
 export default function DigitalTicketsPage() {
-  const { data: session } = useSession();
-  const userEmail = session?.user?.email || "student@example.com";
-  const tickets = dataStore.getTicketsByUser(userEmail);
-
+  const router = useRouter();
+  const { data: session, status } = useSession();
+  const [tickets, setTickets] = useState<StoredTicket[]>([]);
+  const [isLoading, setIsLoading] = useState<boolean>(true);
   const [qrImages, setQrImages] = useState<Record<string, string>>({});
+
+  useEffect(() => {
+    if (status === "unauthenticated") {
+      router.push("/login?callbackUrl=/dashboard/tickets");
+      return;
+    }
+
+    if (status === "authenticated") {
+      const loadTickets = async () => {
+        setIsLoading(true);
+        try {
+          const res = await fetch("/api/user/tickets", { cache: "no-store" });
+          if (res.ok) {
+            const data = await res.json();
+            if (data.tickets && Array.isArray(data.tickets)) {
+              setTickets(data.tickets);
+              return;
+            }
+          }
+        } catch {}
+        const userEmail = session?.user?.email || "";
+        setTickets(dataStore.getTicketsByUser(userEmail));
+        setIsLoading(false);
+      };
+
+      loadTickets().finally(() => setIsLoading(false));
+    }
+  }, [status, session, router]);
 
   useEffect(() => {
     // Generate QR codes for all tickets
@@ -47,6 +77,19 @@ export default function DigitalTicketsPage() {
     window.print();
   };
 
+  const handleDownloadTicket = (ticket: StoredTicket) => {
+    const qrUrl = qrImages[ticket.id];
+    if (!qrUrl) return;
+
+    // Create a temporary canvas or download link for the QR pass
+    const link = document.createElement("a");
+    link.href = qrUrl;
+    link.download = `ticket-${ticket.ticketNumber}-${ticket.qrToken}.png`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
   return (
     <div className="space-y-8 max-w-4xl mx-auto">
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 border-b border-border pb-4">
@@ -62,7 +105,7 @@ export default function DigitalTicketsPage() {
         {tickets.length > 0 && (
           <button
             onClick={handlePrint}
-            className="px-4 py-2 rounded-md bg-card border border-heritage-gold/50 text-foreground hover:bg-heritage-sandstone/20 text-xs font-semibold flex items-center space-x-1.5 transition-colors"
+            className="px-4 py-2 rounded-md bg-card border border-heritage-gold/50 text-foreground hover:bg-heritage-sandstone/20 text-xs font-semibold flex items-center space-x-1.5 transition-colors cursor-pointer"
           >
             <Printer className="w-3.5 h-3.5 text-heritage-gold" />
             <span>Print All Tickets</span>
@@ -70,7 +113,12 @@ export default function DigitalTicketsPage() {
         )}
       </div>
 
-      {tickets.length === 0 ? (
+      {isLoading ? (
+        <div className="text-center py-16 bg-card rounded-2xl border border-border space-y-3">
+          <Loader2 className="w-8 h-8 animate-spin text-fest-sunset mx-auto" />
+          <p className="text-xs text-muted-foreground">Loading your digital QR entry tickets...</p>
+        </div>
+      ) : tickets.length === 0 ? (
         <div className="text-center py-16 bg-card rounded-2xl border border-border space-y-3">
           <TicketIcon className="w-12 h-12 text-muted-foreground mx-auto" />
           <h3 className="font-serif text-lg font-bold text-foreground">
@@ -104,13 +152,22 @@ export default function DigitalTicketsPage() {
                   </div>
                 </div>
 
-                <div className="text-left sm:text-right">
-                  <span className="text-[10px] uppercase font-sans text-heritage-sandstone block">
-                    Ticket ID
-                  </span>
-                  <span className="font-mono text-xs font-bold text-heritage-gold">
-                    {t.ticketNumber}
-                  </span>
+                <div className="flex items-center space-x-3">
+                  <div className="text-left sm:text-right">
+                    <span className="text-[10px] uppercase font-sans text-heritage-sandstone block">
+                      Ticket ID
+                    </span>
+                    <span className="font-mono text-xs font-bold text-heritage-gold">
+                      {t.ticketNumber}
+                    </span>
+                  </div>
+                  <button
+                    onClick={() => handleDownloadTicket(t)}
+                    title="Download QR Pass Image"
+                    className="p-1.5 rounded-lg bg-heritage-charcoal hover:bg-black/60 text-heritage-gold border border-heritage-gold/40 transition-colors cursor-pointer"
+                  >
+                    <Download className="w-4 h-4" />
+                  </button>
                 </div>
               </div>
 

@@ -1,9 +1,10 @@
 "use client";
 
-import React from "react";
+import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import { useSession } from "next-auth/react";
-import { dataStore } from "@/lib/data-store";
+import { useRouter } from "next/navigation";
+import { dataStore, StoredRegistration } from "@/lib/data-store";
 import {
   CalendarCheck,
   CheckCircle2,
@@ -12,13 +13,43 @@ import {
   ArrowRight,
   Ticket,
   Plus,
+  Loader2,
 } from "lucide-react";
 import { formatCurrency, formatDate } from "@/lib/utils";
 
 export default function MyRegistrationsPage() {
-  const { data: session } = useSession();
-  const userId = (session?.user as any)?.id || "usr-student-1";
-  const registrations = dataStore.getRegistrationsByUser(userId);
+  const router = useRouter();
+  const { data: session, status } = useSession();
+  const [registrations, setRegistrations] = useState<StoredRegistration[]>([]);
+  const [isLoading, setIsLoading] = useState<boolean>(true);
+
+  useEffect(() => {
+    if (status === "unauthenticated") {
+      router.push("/login?callbackUrl=/dashboard/registrations");
+      return;
+    }
+
+    if (status === "authenticated") {
+      const loadRegistrations = async () => {
+        setIsLoading(true);
+        try {
+          const res = await fetch("/api/user/registrations", { cache: "no-store" });
+          if (res.ok) {
+            const data = await res.json();
+            if (data.registrations && Array.isArray(data.registrations)) {
+              setRegistrations(data.registrations);
+              return;
+            }
+          }
+        } catch {}
+        const userId = (session?.user as any)?.id || session?.user?.email || "";
+        setRegistrations(dataStore.getRegistrationsByUser(userId));
+        setIsLoading(false);
+      };
+
+      loadRegistrations().finally(() => setIsLoading(false));
+    }
+  }, [status, session, router]);
 
   return (
     <div className="space-y-6 max-w-6xl mx-auto">
@@ -41,7 +72,12 @@ export default function MyRegistrationsPage() {
       </div>
 
       <div className="space-y-4">
-        {registrations.length === 0 ? (
+        {isLoading ? (
+          <div className="text-center py-16 bg-card rounded-2xl border border-border">
+            <Loader2 className="w-8 h-8 animate-spin text-fest-sunset mx-auto mb-3" />
+            <p className="text-xs text-muted-foreground">Loading your event registrations...</p>
+          </div>
+        ) : registrations.length === 0 ? (
           <div className="text-center py-16 bg-card rounded-2xl border border-border">
             <CalendarCheck className="w-12 h-12 text-muted-foreground mx-auto mb-3" />
             <h3 className="font-serif text-lg font-bold text-foreground">
@@ -103,6 +139,10 @@ export default function MyRegistrationsPage() {
                       <strong className="text-amber-600 dark:text-amber-400">
                         Payment Proof Under Finance Review
                       </strong>
+                    ) : reg.paymentStatus === "resubmission_required" ? (
+                      <strong className="text-amber-500">
+                        Resubmission Requested by Finance
+                      </strong>
                     ) : (
                       <strong className="text-destructive">
                         Payment Required via Paytm QR
@@ -123,10 +163,10 @@ export default function MyRegistrationsPage() {
                   </Link>
                 ) : (
                   <Link
-                    href="/dashboard/payments"
+                    href={`/dashboard/payments?regId=${encodeURIComponent(reg.id)}`}
                     className="px-4 py-2 rounded-md bg-heritage-gold/20 hover:bg-heritage-gold/30 text-heritage-gold-dark dark:text-heritage-gold-light border border-heritage-gold/50 text-xs font-bold transition-colors"
                   >
-                    <span>Submit UPI Proof</span>
+                    <span>{reg.paymentStatus === "resubmission_required" ? "Resubmit Proof" : "Submit UPI Proof"}</span>
                   </Link>
                 )}
               </div>

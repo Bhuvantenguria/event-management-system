@@ -1,6 +1,6 @@
 "use client";
 
-import React from "react";
+import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import { dataStore } from "@/lib/data-store";
 import {
@@ -13,22 +13,42 @@ import {
   ShieldCheck,
   CheckCircle2,
   Clock,
+  Loader2,
 } from "lucide-react";
 import { formatCurrency } from "@/lib/utils";
 
 export default function AdminOverviewDashboard() {
-  const registrations = dataStore.getAllRegistrations();
-  const payments = dataStore.getAllPayments();
-  const events = dataStore.getAllEvents();
-  const gallery = dataStore.getAllGalleryItems();
-  const qrSettings = dataStore.getQrSettings();
+  const [stats, setStats] = useState({
+    totalEvents: dataStore.getAllEvents().length,
+    totalRegistrations: dataStore.getAllRegistrations().length,
+    pendingPayments: dataStore.getAllPayments().filter((p) => p.status === "pending").length,
+    approvedPayments: dataStore.getAllPayments().filter((p) => p.status === "approved").length,
+    totalRevenue: dataStore
+      .getAllPayments()
+      .filter((p) => p.status === "approved")
+      .reduce((sum, p) => sum + (p.amountSubmitted || 0), 0),
+    galleryCount: dataStore.getAllGalleryItems().length,
+  });
 
-  const pendingPayments = payments.filter((p) => p.status === "pending").length;
-  const approvedPayments = payments.filter((p) => p.status === "approved").length;
+  useEffect(() => {
+    fetch("/api/admin/overview")
+      .then((res) => res.json())
+      .then((data) => {
+        if (data.stats) {
+          setStats(data.stats);
+        }
+      })
+      .catch(() => {});
+  }, []);
 
-  const totalRevenue = payments
-    .filter((p) => p.status === "approved")
-    .reduce((sum, p) => sum + (p.amountSubmitted || 0), 0);
+  const {
+    totalEvents,
+    totalRegistrations,
+    pendingPayments,
+    approvedPayments,
+    totalRevenue,
+    galleryCount,
+  } = stats;
 
   return (
     <div className="space-y-8 max-w-6xl mx-auto font-sans">
@@ -57,7 +77,7 @@ export default function AdminOverviewDashboard() {
             Events Hosted
           </span>
           <span className="font-serif text-2xl font-black text-foreground">
-            {events.length}
+            {totalEvents}
           </span>
           <span className="text-[10px] text-heritage-gold font-semibold block">Active &amp; Open</span>
         </div>
@@ -67,7 +87,7 @@ export default function AdminOverviewDashboard() {
             Registrations
           </span>
           <span className="font-serif text-2xl font-black text-foreground">
-            {registrations.length}
+            {totalRegistrations}
           </span>
           <span className="text-[10px] text-emerald-600 font-semibold block">All Events</span>
         </div>
@@ -97,7 +117,7 @@ export default function AdminOverviewDashboard() {
             Gallery Media
           </span>
           <span className="font-serif text-2xl font-black text-foreground">
-            {gallery.length}
+            {galleryCount}
           </span>
           <span className="text-[10px] text-heritage-gold font-semibold block">Items Curated</span>
         </div>

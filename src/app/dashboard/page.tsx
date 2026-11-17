@@ -1,9 +1,10 @@
 "use client";
 
-import React from "react";
+import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import { useSession } from "next-auth/react";
-import { dataStore } from "@/lib/data-store";
+import { useRouter } from "next/navigation";
+import { dataStore, StoredRegistration, StoredTicket } from "@/lib/data-store";
 import {
   CalendarCheck,
   Ticket,
@@ -13,19 +14,65 @@ import {
   ArrowRight,
   CreditCard,
   Sparkles,
+  Loader2,
 } from "lucide-react";
 import { formatCurrency } from "@/lib/utils";
 
 export default function DashboardOverviewPage() {
-  const { data: session } = useSession();
+  const router = useRouter();
+  const { data: session, status } = useSession();
   const user = session?.user;
 
-  // Retrieve user registrations and tickets from dataStore
-  const userEmail = user?.email || "student@example.com";
-  const userId = (user as any)?.id || "usr-student-1";
+  const [registrations, setRegistrations] = useState<StoredRegistration[]>([]);
+  const [tickets, setTickets] = useState<StoredTicket[]>([]);
+  const [isLoading, setIsLoading] = useState<boolean>(true);
 
-  const registrations = dataStore.getRegistrationsByUser(userId);
-  const tickets = dataStore.getTicketsByUser(userEmail);
+  useEffect(() => {
+    if (status === "unauthenticated") {
+      router.push("/login?callbackUrl=/dashboard");
+      return;
+    }
+
+    if (status === "authenticated") {
+      const loadData = async () => {
+        setIsLoading(true);
+        try {
+          const [regsRes, tixRes] = await Promise.allSettled([
+            fetch("/api/user/registrations", { cache: "no-store" }),
+            fetch("/api/user/tickets", { cache: "no-store" }),
+          ]);
+
+          if (regsRes.status === "fulfilled" && regsRes.value.ok) {
+            const data = await regsRes.value.json();
+            if (data.registrations && Array.isArray(data.registrations)) {
+              setRegistrations(data.registrations);
+            }
+          } else {
+            const userId = (user as any)?.id || user?.email || "";
+            setRegistrations(dataStore.getRegistrationsByUser(userId));
+          }
+
+          if (tixRes.status === "fulfilled" && tixRes.value.ok) {
+            const data = await tixRes.value.json();
+            if (data.tickets && Array.isArray(data.tickets)) {
+              setTickets(data.tickets);
+            }
+          } else {
+            const email = user?.email || "";
+            setTickets(dataStore.getTicketsByUser(email));
+          }
+        } catch {
+          const userId = (user as any)?.id || user?.email || "";
+          setRegistrations(dataStore.getRegistrationsByUser(userId));
+          setTickets(dataStore.getTicketsByUser(user?.email || ""));
+        } finally {
+          setIsLoading(false);
+        }
+      };
+
+      loadData();
+    }
+  }, [status, session, router, user]);
 
   const approvedCount = registrations.filter((r) => r.paymentStatus === "approved").length;
   const pendingCount = registrations.filter((r) => r.paymentStatus === "pending_verification").length;
@@ -164,7 +211,16 @@ export default function DashboardOverviewPage() {
               </tr>
             </thead>
             <tbody className="divide-y divide-border">
-              {registrations.length === 0 ? (
+              {isLoading ? (
+                <tr>
+                  <td colSpan={6} className="py-8 text-center text-muted-foreground">
+                    <div className="flex items-center justify-center space-x-2">
+                      <Loader2 className="w-4 h-4 animate-spin text-fest-sunset" />
+                      <span>Loading your registrations...</span>
+                    </div>
+                  </td>
+                </tr>
+              ) : registrations.length === 0 ? (
                 <tr>
                   <td colSpan={6} className="py-8 text-center text-muted-foreground">
                     You haven't registered for any events yet.{" "}

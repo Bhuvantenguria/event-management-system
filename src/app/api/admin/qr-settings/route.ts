@@ -23,6 +23,8 @@ export async function POST(request: Request) {
     const body = await request.json();
     const { upiId, upiName, qrImageUrl, paymentInstructions, isEnabled } = body;
 
+    await syncWithMongo();
+
     const updated = dataStore.updateQrSettings({
       upiId: upiId !== undefined ? upiId : undefined,
       upiName: upiName !== undefined ? upiName : undefined,

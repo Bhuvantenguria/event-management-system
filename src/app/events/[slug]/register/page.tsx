@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
@@ -54,26 +54,53 @@ export default function EventRegistrationPage({ params }: { params: { slug: stri
   const router = useRouter();
   const { data: session, status } = useSession();
 
-  const storeEvent = dataStore.getEventBySlug(params.slug) || dataStore.getEventById(params.slug);
-  const event = storeEvent
-    ? {
+  const getInitialEvent = () => {
+    const storeEvent = dataStore.getEventBySlug(params.slug) || dataStore.getEventById(params.slug);
+    if (storeEvent) {
+      return {
         title: storeEvent.title,
         slug: storeEvent.slug,
         category: storeEvent.category,
         registrationFee: storeEvent.registrationFee,
-        participationType: "both",
-        minTeamSize: 1,
-        maxTeamSize: 16,
-      }
-    : EVENT_METADATA[params.slug] || {
-        title: params.slug.replace(/-/g, " ").toUpperCase(),
-        slug: params.slug,
-        category: "Featured Event",
-        registrationFee: 300,
-        participationType: "both",
-        minTeamSize: 1,
-        maxTeamSize: 4,
+        participationType: storeEvent.participationType || "both",
+        minTeamSize: storeEvent.minTeamSize || 1,
+        maxTeamSize: storeEvent.maxTeamSize || 16,
       };
+    }
+    return EVENT_METADATA[params.slug] || {
+      title: params.slug.replace(/-/g, " ").toUpperCase(),
+      slug: params.slug,
+      category: "Featured Event",
+      registrationFee: 300,
+      participationType: "both",
+      minTeamSize: 1,
+      maxTeamSize: 4,
+    };
+  };
+
+  const [event, setEvent] = useState<any>(getInitialEvent);
+
+  useEffect(() => {
+    fetch("/api/events")
+      .then((res) => res.json())
+      .then((data) => {
+        if (data.events && Array.isArray(data.events)) {
+          const match = data.events.find((e: any) => e.slug === params.slug || e.id === params.slug);
+          if (match) {
+            setEvent({
+              title: match.title,
+              slug: match.slug,
+              category: match.category,
+              registrationFee: match.registrationFee,
+              participationType: match.participationType || "both",
+              minTeamSize: match.minTeamSize || 1,
+              maxTeamSize: match.maxTeamSize || 16,
+            });
+          }
+        }
+      })
+      .catch(() => {});
+  }, [params.slug]);
 
   const isTeamRequired = event.participationType === "team";
   const [participationType, setParticipationType] = useState<"individual" | "team">(

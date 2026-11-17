@@ -2,7 +2,7 @@
 
 import React, { useState } from "react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { useSession, signOut } from "next-auth/react";
 import {
   LayoutDashboard,
@@ -22,11 +22,14 @@ import {
   Settings,
   FileSpreadsheet,
   Shield,
+  ShieldAlert,
   LogOut,
   ChevronRight,
   Menu,
   X,
   Sparkles,
+  Loader2,
+  Lock,
 } from "lucide-react";
 import { LotusOrnament } from "@/components/ui/heritage-decorations";
 import { ThemeToggle } from "@/components/theme-toggle";
@@ -41,12 +44,71 @@ const ADMIN_NAV = [
 ];
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
+  const router = useRouter();
   const pathname = usePathname();
   const { data: session, status } = useSession();
   const [mobileOpen, setMobileOpen] = useState(false);
 
+  React.useEffect(() => {
+    if (status === "unauthenticated") {
+      router.push(`/login?callbackUrl=${encodeURIComponent(pathname)}`);
+    }
+  }, [status, pathname, router]);
+
   const user = session?.user;
   const role = (user as any)?.role;
+  const isAdmin = role && ["admin", "super_admin"].includes(role);
+
+  if (status === "loading") {
+    return (
+      <div className="min-h-screen bg-background flex flex-col items-center justify-center p-4">
+        <Loader2 className="w-8 h-8 animate-spin text-fest-sunset mb-2" />
+        <span className="text-xs text-muted-foreground font-sans">Verifying administrative credentials...</span>
+      </div>
+    );
+  }
+
+  if (status === "unauthenticated") {
+    return null;
+  }
+
+  if (!isAdmin) {
+    return (
+      <div className="min-h-screen bg-background flex flex-col items-center justify-center p-4 sm:p-6 text-center font-sans">
+        <div className="max-w-md w-full bg-card rounded-2xl border-2 border-destructive/40 p-6 sm:p-8 shadow-xl space-y-4">
+          <div className="w-12 h-12 rounded-full bg-destructive/10 text-destructive flex items-center justify-center mx-auto">
+            <Lock className="w-6 h-6" />
+          </div>
+          <h2 className="font-serif text-xl sm:text-2xl font-bold text-foreground">
+            Access Restricted
+          </h2>
+          <p className="text-xs sm:text-sm text-muted-foreground">
+            Administrator privileges are required to access this portal. You are currently signed in as a <span className="font-bold text-foreground capitalize">{role || "participant"}</span>.
+          </p>
+          <div className="pt-2 flex flex-col sm:flex-row gap-2 justify-center">
+            <Link
+              href="/"
+              className="px-4 py-2 rounded-lg bg-secondary text-secondary-foreground text-xs font-semibold hover:bg-secondary/80 transition-colors"
+            >
+              Public Website
+            </Link>
+            <Link
+              href="/dashboard"
+              className="px-4 py-2 rounded-lg bg-heritage-sandstone/20 text-foreground text-xs font-semibold hover:bg-heritage-sandstone/30 transition-colors"
+            >
+              Participant Portal
+            </Link>
+            <button
+              onClick={() => signOut({ callbackUrl: "/login?callbackUrl=/admin" })}
+              className="px-4 py-2 rounded-lg bg-destructive text-destructive-foreground text-xs font-semibold hover:bg-destructive/90 transition-colors cursor-pointer"
+            >
+              Switch Account
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-background flex flex-col lg:flex-row">

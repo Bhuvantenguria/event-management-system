@@ -20,6 +20,7 @@ import {
   Image as ImageIcon,
 } from "lucide-react";
 import { dataStore } from "@/lib/data-store";
+import { syncWithMongo } from "@/lib/db-sync";
 import { formatCurrency } from "@/lib/utils";
 
 // Helper event catalog for dynamic slug resolution
@@ -169,7 +170,8 @@ const EVENT_DIRECTORY: Record<string, any> = {
   },
 };
 
-export default function EventDetailPage({ params }: { params: { slug: string } }) {
+export default async function EventDetailPage({ params }: { params: { slug: string } }) {
+  await syncWithMongo();
   const storeEvent = dataStore.getEventBySlug(params.slug) || dataStore.getEventById(params.slug);
   const staticEvent = EVENT_DIRECTORY[params.slug];
 

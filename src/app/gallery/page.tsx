@@ -13,6 +13,14 @@ export default function GalleryPage() {
 
   useEffect(() => {
     setItems([...dataStore.getAllGalleryItems()]);
+    fetch("/api/gallery")
+      .then((res) => res.json())
+      .then((data) => {
+        if (data.gallery && Array.isArray(data.gallery)) {
+          setItems(data.gallery);
+        }
+      })
+      .catch(() => {});
   }, []);
 
   const years = ["All", "2026", "2025", "2024", "2023"];
