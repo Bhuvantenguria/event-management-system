@@ -259,9 +259,15 @@ function PaymentsContent() {
       return;
     }
 
-    const img =
-      screenshotUrl.trim() ||
-      "https://images.unsplash.com/photo-1554224155-8d04cb21cd6c?q=80&w=600&auto=format&fit=crop";
+    if (!screenshotUrl || !screenshotUrl.trim()) {
+      setStatusMessage({
+        type: "error",
+        text: "Payment Screenshot Receipt is compulsory. Please upload your transaction receipt screenshot or provide a valid receipt image link.",
+      });
+      return;
+    }
+
+    const img = screenshotUrl.trim();
 
     setIsSubmitting(true);
     try {
@@ -582,13 +588,18 @@ function PaymentsContent() {
 
             {/* Payment Screenshot Upload */}
             <div className="space-y-2 pt-2">
-              <label className="text-xs font-semibold text-foreground font-sans block">
-                Payment Screenshot Receipt * (Max 8MB)
-              </label>
+              <div className="flex items-center justify-between">
+                <label className="text-xs font-semibold text-foreground font-sans block">
+                  Payment Screenshot Receipt <span className="text-destructive font-bold">* (Compulsory / अनिवार्य)</span>
+                </label>
+                <span className="text-[10px] text-muted-foreground font-sans">Max 8MB (Image / Receipt)</span>
+              </div>
 
               {!isUsingCustomUrl ? (
                 <div className="space-y-2">
-                  <div className="border-2 border-dashed border-fest-gold/40 rounded-xl p-4 sm:p-6 text-center hover:border-fest-sunset transition-colors bg-fest-sunset/5">
+                  <div className={`border-2 border-dashed rounded-xl p-4 sm:p-6 text-center transition-colors ${
+                    screenshotUrl ? "border-emerald-500/50 bg-emerald-500/5" : "border-fest-gold/40 hover:border-fest-sunset bg-fest-sunset/5"
+                  }`}>
                     {isUploading ? (
                       <div className="flex flex-col items-center justify-center space-y-2 py-2">
                         <Loader2 className="w-8 h-8 animate-spin text-fest-sunset" />
@@ -598,12 +609,12 @@ function PaymentsContent() {
                       </div>
                     ) : (
                       <label className="cursor-pointer block">
-                        <CloudUpload className="w-8 h-8 text-fest-sunset mx-auto mb-2" />
+                        <CloudUpload className={`w-8 h-8 mx-auto mb-2 ${screenshotUrl ? "text-emerald-500" : "text-fest-sunset"}`} />
                         <span className="text-xs font-bold text-foreground block">
-                          Click to browse and upload receipt screenshot
+                          {screenshotUrl ? "Receipt Uploaded! Click to replace screenshot" : "Click to browse and upload receipt screenshot (Mandatory)"}
                         </span>
                         <span className="text-[11px] text-muted-foreground font-sans block mt-1">
-                          PNG, JPG, WEBP, or PDF image
+                          PNG, JPG, WEBP, or PDF screenshot of your UPI transfer
                         </span>
                         <input
                           type="file"
@@ -623,7 +634,7 @@ function PaymentsContent() {
                     <button
                       type="button"
                       onClick={() => setIsUsingCustomUrl(true)}
-                      className="text-[11px] text-fest-sunset hover:underline font-sans"
+                      className="text-[11px] text-fest-sunset hover:underline font-sans cursor-pointer"
                     >
                       Or paste an image URL directly
                     </button>
@@ -633,7 +644,8 @@ function PaymentsContent() {
                 <div className="space-y-2">
                   <input
                     type="url"
-                    placeholder="https://images.unsplash.com/... or your image link"
+                    required
+                    placeholder="https://... direct image URL of your payment receipt (Compulsory)"
                     value={screenshotUrl}
                     onChange={(e) => setScreenshotUrl(e.target.value)}
                     className="w-full px-3 py-2 text-xs sm:text-sm rounded-md bg-background border border-border text-foreground focus:outline-none focus:ring-2 focus:ring-fest-sunset"
@@ -642,7 +654,7 @@ function PaymentsContent() {
                     <button
                       type="button"
                       onClick={() => setIsUsingCustomUrl(false)}
-                      className="text-[11px] text-fest-sunset hover:underline font-sans"
+                      className="text-[11px] text-fest-sunset hover:underline font-sans cursor-pointer"
                     >
                       Or upload file from device
                     </button>
@@ -650,8 +662,8 @@ function PaymentsContent() {
                 </div>
               )}
 
-              {screenshotUrl && (
-                <div className="p-3 rounded-lg border border-border bg-card flex items-center justify-between">
+              {screenshotUrl ? (
+                <div className="p-3 rounded-lg border border-emerald-500/40 bg-emerald-500/5 flex items-center justify-between">
                   <div className="flex items-center space-x-3 overflow-hidden">
                     <img
                       src={screenshotUrl}
@@ -659,8 +671,9 @@ function PaymentsContent() {
                       className="w-12 h-12 object-cover rounded border border-border shrink-0"
                     />
                     <div className="overflow-hidden">
-                      <span className="text-xs font-bold text-foreground block truncate">
-                        Receipt Image Attached
+                      <span className="text-xs font-bold text-emerald-600 dark:text-emerald-400 flex items-center">
+                        <CheckCircle2 className="w-3.5 h-3.5 mr-1" />
+                        Receipt Attached (Compulsory Step Completed)
                       </span>
                       <span className="text-[10px] text-muted-foreground block truncate">
                         {screenshotUrl}
@@ -670,11 +683,17 @@ function PaymentsContent() {
                   <button
                     type="button"
                     onClick={() => setScreenshotUrl("")}
-                    className="p-1 text-muted-foreground hover:text-destructive"
+                    className="p-1 text-muted-foreground hover:text-destructive cursor-pointer"
+                    title="Remove receipt"
                   >
                     <X className="w-4 h-4" />
                   </button>
                 </div>
+              ) : (
+                <p className="text-[11px] text-amber-600 dark:text-amber-400 font-sans flex items-center">
+                  <AlertTriangle className="w-3.5 h-3.5 mr-1 shrink-0" />
+                  Payment screenshot receipt is mandatory for verification and ticket issuance.
+                </p>
               )}
             </div>
 

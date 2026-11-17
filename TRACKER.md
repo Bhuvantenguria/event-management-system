@@ -427,6 +427,13 @@
        - Payment resubmission requests with admin explanation
        - Full gallery media CRUD
        - Organizer Paytm QR configuration update
+  7. **Mandatory Payment Screenshot Receipt Enforcement (`src/app/dashboard/payments/page.tsx`, `src/app/api/payments/submit/route.ts`)**:
+     - *Issue*: The payment proof form had a silent unsplash placeholder fallback if the participant did not provide a receipt image, allowing submission without an actual screenshot.
+     - *Fix*:
+       - Removed placeholder fallback completely.
+       - Enforced client-side blocking: form rejects submission with a clear error if screenshot receipt is missing.
+       - Enforced server-side validation: `/api/payments/submit` rejects empty or trimmed screenshot URLs with HTTP 400.
+       - Enhanced UI: Added clear `* (Compulsory / अनिवार्य)` badge, upload confirmation badges, and mandatory instructions.
 - **Final Verification**:
   - `npx tsc --noEmit`: 0 TypeScript errors.
   - `npx vitest run`: 37/37 tests passing across all 8 test suites (100% pass rate).

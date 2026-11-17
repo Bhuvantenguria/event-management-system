@@ -31,9 +31,9 @@ export async function POST(request: Request) {
       notes,
     } = body;
 
-    if (!utrNumber || !paymentScreenshotUrl) {
+    if (!utrNumber || !utrNumber.trim() || !paymentScreenshotUrl || !paymentScreenshotUrl.trim()) {
       return NextResponse.json(
-        { error: "12-digit UTR number and payment receipt screenshot proof are required." },
+        { error: "12-digit UTR number and payment receipt screenshot proof are compulsory." },
         { status: 400 }
       );
     }

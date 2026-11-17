@@ -279,6 +279,7 @@ describe("Complete End-to-End User & Admin Testing Suite", () => {
         amountSubmitted: 300,
         utrNumber: utr,
         paymentScreenshotUrl: "https://example.com/receipt.png",
+        paymentDate: "2026-03-13",
       });
 
       expect(payment.status).toBe("pending");
@@ -324,6 +325,7 @@ describe("Complete End-to-End User & Admin Testing Suite", () => {
         amountSubmitted: 300,
         utrNumber: utr,
         paymentScreenshotUrl: "https://example.com/blurry.png",
+        paymentDate: "2026-03-13",
       });
 
       // Finance Admin requests resubmission
