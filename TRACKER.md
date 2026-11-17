@@ -493,8 +493,43 @@
     - Updated `.env.example` with clear step-by-step guidance on creating Google App Passwords, port configuration, and branding variables.
 - **Verification & Testing Results**:
   - `npx tsc --noEmit`: 0 TypeScript errors.
-  - `npm test` (`npx vitest run`): 53/53 tests passing across 9 test suites (100% pass rate), including 16 new tests in `src/__tests__/gmail-sending-functionality.test.ts`.
+  - `npm test` (`npx vitest run`): 55/55 tests passing across 9 test suites (100% pass rate), including 18 tests in `src/__tests__/gmail-sending-functionality.test.ts`.
   - `npm run build`: All 55 static and dynamic Next.js routes compiled with exit code 0.
+
+---
+
+### Phase 18: Signout Homepage Redirection & Google App Password Environment Validation
+- **Status**: Completed
+- **Why**: Resolve client-side signout redirection dropping users to `localhost:3000` instead of the homepage on the live Vercel domain (`https://event-management-system-kappa-gold.vercel.app/`), eliminate all hardcoded `localhost:3000` fallbacks, and diagnose/remedy the user's provided Gmail SMTP environment settings.
+- **Root Cause Analysis**:
+  1. *Signout Redirection to `localhost:3000`*:
+     - NextAuth's `signOut({ callbackUrl: "/" })` sends a POST to `/api/auth/signout` and then redirects to the origin resolved by NextAuth's `redirect` callback.
+     - In NextAuth, `baseUrl` defaults to `process.env.NEXTAUTH_URL`. When `NEXTAUTH_URL` was set to or defaulted to `http://localhost:3000`, the relative URL `"/"` was joined as `http://localhost:3000/`, forcing live Vercel sessions to navigate to localhost.
+  2. *Gmail Environment Configuration Analysis*:
+     - *Issue A: `SMTP_PASS="Aiims12345678"`*: The user provided a standard personal password (`Aiims12345678`). Google disabled Less Secure Apps access on May 30, 2022. Google SMTP strictly rejects standard account passwords with `535-5.7.8 Username and Password not accepted`. Google SMTP strictly requires a 16-character Google App Password generated after enabling 2-Step Verification.
+     - *Issue B: `EMAIL_FROM="Rangmanch UP Cultural Fest <fest.cultural.up@gmail.com>"`*: The authenticated account is `aiimsrblswar@gmail.com`, but the envelope header attempted to send from `fest.cultural.up@gmail.com`. Gmail SMTP either drops or rewrites mail claiming to be from an unauthorized external account, causing SPF/DKIM/DMARC failure on recipient servers.
+- **Key Technical Implementations**:
+  - **Deterministic Client-Side Signout Navigation (`navbar.tsx`, `admin/layout.tsx`, `dashboard/layout.tsx`)**:
+    - Converted all sign-out button handlers across the desktop navbar dropdown, mobile menu drawer, admin sidebar, and participant sidebar to:
+      ```typescript
+      await signOut({ redirect: false });
+      window.location.href = "/";
+      ```
+    - Calling `signOut({ redirect: false })` terminates the session and clears cookies cleanly in the background, while `window.location.href = "/"` immediately navigates the browser to the root homepage of the *current host* (`https://event-management-system-kappa-gold.vercel.app/`), making it physically impossible to redirect to `localhost:3000`.
+  - **Server-Side Base URL Normalization (`src/lib/utils.ts` & `src/lib/auth/index.ts`)**:
+    - Created `getBaseUrl()` dynamically returning `window.location.origin` in the browser, `process.env.NEXTAUTH_URL` (if non-localhost), `process.env.VERCEL_URL`, or falling back directly to `"https://event-management-system-kappa-gold.vercel.app"`.
+    - Hardcoded `localhost:3000` fallbacks purged from `src/app/robots.ts`, `src/app/sitemap.ts`, `src/app/api/auth/forgot-password/route.ts`, and `src/lib/email/index.ts`.
+    - NextAuth `redirect` callback updated to resolve relative paths against the active production domain.
+  - **Automatic Sender Alignment in Email Pipeline (`src/lib/email/index.ts`)**:
+    - Updated `getSenderAddress()` so that if `EMAIL_FROM` contains a mismatched Gmail address (e.g. `fest.cultural.up@gmail.com`), it automatically aligns the sender to `"AffinityAIIMS '26" <${user}>` (`aiimsrblswar@gmail.com`) to prevent Google authentication rejections.
+    - Updated `verifySmtpConnection()` to detect error `535-5.7.8` and display clear guidance on generating a 16-character App Password.
+  - **Documentation & Instructions (`.env.example`)**:
+    - Documented `NEXTAUTH_URL="https://event-management-system-kappa-gold.vercel.app"` and explicit Google App Password creation steps.
+- **Verification & Testing Results**:
+  - `npx tsc --noEmit`: 0 TypeScript errors.
+  - `npm test`: 55/55 tests passing across all 9 test suites (100% pass rate).
+  - `npm run build`: All 55 routes compiled with code 0.
+
 
 
 

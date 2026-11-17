@@ -176,11 +176,12 @@ export function Navbar() {
 
                     <div className="pt-1.5">
                       <button
-                        onClick={() => {
+                        onClick={async () => {
                           setUserDropdownOpen(false);
-                          signOut({ callbackUrl: "/" });
+                          await signOut({ redirect: false });
+                          window.location.href = "/";
                         }}
-                        className="flex items-center w-full px-4 py-2 text-xs text-destructive hover:bg-destructive/10 transition-colors text-left font-bold"
+                        className="flex items-center w-full px-4 py-2 text-xs text-destructive hover:bg-destructive/10 transition-colors text-left font-bold cursor-pointer"
                       >
                         <LogOut className="w-4 h-4 mr-2.5" />
                         Sign Out
@@ -314,11 +315,12 @@ export function Navbar() {
                   </Link>
                 )}
                 <button
-                  onClick={() => {
+                  onClick={async () => {
                     setMobileMenuOpen(false);
-                    signOut({ callbackUrl: "/" });
+                    await signOut({ redirect: false });
+                    window.location.href = "/";
                   }}
-                  className="flex items-center px-3 py-2 text-xs rounded-xl text-destructive hover:bg-destructive/10 text-left font-bold"
+                  className="flex items-center px-3 py-2 text-xs rounded-xl text-destructive hover:bg-destructive/10 text-left font-bold cursor-pointer"
                 >
                   <LogOut className="w-4 h-4 mr-2" />
                   Sign Out

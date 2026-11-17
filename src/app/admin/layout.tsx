@@ -99,7 +99,10 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
               Participant Portal
             </Link>
             <button
-              onClick={() => signOut({ callbackUrl: "/login?callbackUrl=/admin" })}
+              onClick={async () => {
+                await signOut({ redirect: false });
+                window.location.href = "/login?callbackUrl=/admin";
+              }}
               className="px-4 py-2 rounded-lg bg-destructive text-destructive-foreground text-xs font-semibold hover:bg-destructive/90 transition-colors cursor-pointer"
             >
               Switch Account
@@ -209,8 +212,11 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
             <span>Participant View</span>
           </Link>
           <button
-            onClick={() => signOut({ callbackUrl: "/" })}
-            className="flex items-center space-x-2 w-full px-3 py-1.5 text-xs text-destructive hover:bg-destructive/10 rounded font-sans"
+            onClick={async () => {
+              await signOut({ redirect: false });
+              window.location.href = "/";
+            }}
+            className="flex items-center space-x-2 w-full px-3 py-1.5 text-xs text-destructive hover:bg-destructive/10 rounded font-sans cursor-pointer"
           >
             <LogOut className="w-3.5 h-3.5" />
             <span>Sign Out</span>

@@ -16,6 +16,7 @@ import {
   sendTestEmail,
   emailDispatchLogs,
 } from "@/lib/email";
+import { getBaseUrl, PRODUCTION_URL } from "@/lib/utils";
 import { dataStore } from "@/lib/data-store";
 import bcrypt from "bcryptjs";
 
@@ -82,6 +83,34 @@ describe("Gmail SMTP Email Sending Pipeline & Diagnostics", () => {
       else delete process.env.EMAIL_FROM;
       if (origUser) process.env.SMTP_USER = origUser;
       else delete process.env.SMTP_USER;
+    });
+
+    it("should automatically align mismatched Gmail EMAIL_FROM with authenticated SMTP_USER", () => {
+      const origFrom = process.env.EMAIL_FROM;
+      const origUser = process.env.SMTP_USER;
+
+      process.env.SMTP_USER = "aiimsrblswar@gmail.com";
+      process.env.EMAIL_FROM = "Rangmanch UP Cultural Fest <fest.cultural.up@gmail.com>";
+
+      const sender = getSenderAddress();
+      expect(sender).toContain("aiimsrblswar@gmail.com");
+      expect(sender).not.toContain("fest.cultural.up@gmail.com");
+
+      // Cleanup
+      if (origFrom) process.env.EMAIL_FROM = origFrom;
+      else delete process.env.EMAIL_FROM;
+      if (origUser) process.env.SMTP_USER = origUser;
+      else delete process.env.SMTP_USER;
+    });
+
+    it("should resolve production domain as default base URL avoiding localhost:3000", () => {
+      const origUrl = process.env.NEXTAUTH_URL;
+      delete process.env.NEXTAUTH_URL;
+
+      expect(getBaseUrl()).toBe(PRODUCTION_URL);
+      expect(getBaseUrl()).toBe("https://event-management-system-kappa-gold.vercel.app");
+
+      if (origUrl) process.env.NEXTAUTH_URL = origUrl;
     });
 
     it("should properly strip spaces from Google App Passwords during transporter creation", () => {
@@ -238,7 +267,7 @@ describe("Gmail SMTP Email Sending Pipeline & Diagnostics", () => {
     it("should dispatch password reset instructions with secure link", async () => {
       const res = await sendPasswordResetEmail(
         "reset.user@example.com",
-        "http://localhost:3000/login?resetToken=sample-token-123"
+        "https://event-management-system-kappa-gold.vercel.app/login?resetToken=sample-token-123"
       );
       expect(res.success).toBe(true);
 
@@ -295,6 +324,7 @@ describe("Gmail SMTP Email Sending Pipeline & Diagnostics", () => {
         amountSubmitted: 300,
         utrNumber: `99887766${Date.now().toString().slice(-4)}`,
         paymentScreenshotUrl: "https://example.com/receipt.jpg",
+        paymentDate: new Date().toISOString().split("T")[0],
       });
 
       // Admin reviews payment with resubmit

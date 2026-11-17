@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { dataStore } from "@/lib/data-store";
 import { syncWithMongo } from "@/lib/db-sync";
 import { sendPasswordResetEmail } from "@/lib/email";
+import { getBaseUrl } from "@/lib/utils";
 
 export async function POST(request: Request) {
   try {
@@ -23,7 +24,7 @@ export async function POST(request: Request) {
     // If user exists, generate reset link and dispatch email
     if (user) {
       const resetToken = `rst-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
-      const baseUrl = process.env.NEXTAUTH_URL || "http://localhost:3000";
+      const baseUrl = getBaseUrl();
       const resetUrl = `${baseUrl}/login?resetToken=${resetToken}&email=${encodeURIComponent(cleanEmail)}`;
 
       sendPasswordResetEmail(cleanEmail, resetUrl).catch((err) => {

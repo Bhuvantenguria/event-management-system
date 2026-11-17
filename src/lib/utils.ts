@@ -27,6 +27,34 @@ export function formatDate(dateStr: string | Date | null | undefined): string {
   }).format(d);
 }
 
+export const PRODUCTION_URL = "https://event-management-system-kappa-gold.vercel.app";
+
+/**
+ * Dynamically resolves the base application URL.
+ * Automatically uses window.location.origin in the browser,
+ * or production domain on Vercel, avoiding unwanted localhost:3000 redirects.
+ */
+export function getBaseUrl(): string {
+  if (typeof window !== "undefined" && window.location?.origin) {
+    return window.location.origin;
+  }
+
+  const nextAuthUrl = process.env.NEXTAUTH_URL;
+  if (nextAuthUrl && !nextAuthUrl.includes("localhost")) {
+    return nextAuthUrl.replace(/\/+$/, "");
+  }
+
+  if (process.env.VERCEL_URL) {
+    return `https://${process.env.VERCEL_URL.replace(/\/+$/, "")}`;
+  }
+
+  if (nextAuthUrl) {
+    return nextAuthUrl.replace(/\/+$/, "");
+  }
+
+  return PRODUCTION_URL;
+}
+
 export function formatTime(timeStr: string | null | undefined): string {
   if (!timeStr) return "";
   // Check if string is HH:MM or HH:MM:SS

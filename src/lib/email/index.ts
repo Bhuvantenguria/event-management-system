@@ -1,4 +1,5 @@
 import nodemailer from "nodemailer";
+import { getBaseUrl } from "@/lib/utils";
 
 export interface EmailOptions {
   to: string;
@@ -62,7 +63,17 @@ export function getSenderAddress(): string {
   const user = cleanEnv(process.env.SMTP_USER);
 
   if (process.env.EMAIL_FROM && process.env.EMAIL_FROM.trim()) {
-    return process.env.EMAIL_FROM.trim();
+    const fromVal = process.env.EMAIL_FROM.trim();
+    // If SMTP_USER is set to a Gmail account, and EMAIL_FROM has a different @gmail.com address,
+    // Google SMTP rejects sending mail as a different Gmail user (550 / 553 / bad credentials).
+    // In this case, align sender with the authenticated user:
+    if (user && fromVal.includes("@gmail.com") && !fromVal.toLowerCase().includes(user.toLowerCase())) {
+      console.warn(
+        `[Email Notice] EMAIL_FROM (${fromVal}) uses a different Gmail address than authenticated SMTP_USER (${user}). Automatically aligning sender address to prevent Gmail SMTP authentication rejection.`
+      );
+      return `"${appName}" <${user}>`;
+    }
+    return fromVal;
   }
 
   const email = user || "swar@aiimsraebareli.edu.in";
@@ -177,10 +188,20 @@ export async function verifySmtpConnection(): Promise<{
   } catch (error: any) {
     const errorMsg = error?.message || String(error);
     console.error("[Email SMTP Verify Error]:", errorMsg);
+
+    let userFriendlyMessage = `SMTP connection failed: ${errorMsg}`;
+    if (
+      errorMsg.includes("535") ||
+      errorMsg.includes("Username and Password not accepted") ||
+      errorMsg.includes("BadCredentials")
+    ) {
+      userFriendlyMessage = `Google SMTP Authentication Rejected (535-5.7.8): Google accounts require a 16-character Google App Password (not your regular personal password). To fix: 1. Enable 2-Step Verification at myaccount.google.com/security. 2. Visit myaccount.google.com/apppasswords. 3. Generate a 16-character App Password (e.g. for 'AffinityAIIMS'). 4. Set SMTP_PASS in your Vercel or local environment variables.`;
+    }
+
     return {
       configured: true,
       connected: false,
-      message: `SMTP connection failed: ${errorMsg}`,
+      message: userFriendlyMessage,
       user,
       host,
       port,
@@ -197,7 +218,7 @@ function renderHeritageTemplate(title: string, contentHtml: string): string {
   const appTagline =
     cleanEnv(process.env.NEXT_PUBLIC_APP_TAGLINE) ||
     "AIIMS Raebareli Annual Inter-Collegiate Cultural Festival";
-  const appUrl = cleanEnv(process.env.NEXTAUTH_URL) || "http://localhost:3000";
+  const appUrl = getBaseUrl();
 
   return `
 <!DOCTYPE html>
@@ -313,7 +334,7 @@ export async function sendMail(
 
 // 1. Welcome Email for New Account
 export async function sendWelcomeEmail(to: string, name: string) {
-  const appUrl = cleanEnv(process.env.NEXTAUTH_URL) || "http://localhost:3000";
+  const appUrl = getBaseUrl();
   const html = renderHeritageTemplate(
     "Welcome to AffinityAIIMS '26",
     `
@@ -355,7 +376,7 @@ export async function sendRegistrationConfirmationEmail(
     qrToken?: string;
   }
 ) {
-  const appUrl = cleanEnv(process.env.NEXTAUTH_URL) || "http://localhost:3000";
+  const appUrl = getBaseUrl();
 
   const freeContent = `
     <h2>Registration Confirmed: ${eventTitle}</h2>
@@ -409,7 +430,7 @@ export async function sendPaymentSubmittedEmail(
   utrNumber: string,
   amount: number
 ) {
-  const appUrl = cleanEnv(process.env.NEXTAUTH_URL) || "http://localhost:3000";
+  const appUrl = getBaseUrl();
   const html = renderHeritageTemplate(
     "Payment Proof Under Verification",
     `
@@ -444,7 +465,7 @@ export async function sendPaymentApprovalEmail(
   ticketNumber: string,
   qrToken: string
 ) {
-  const appUrl = cleanEnv(process.env.NEXTAUTH_URL) || "http://localhost:3000";
+  const appUrl = getBaseUrl();
   const html = renderHeritageTemplate(
     "Payment Verified - Your QR Ticket is Ready",
     `
@@ -477,7 +498,7 @@ export async function sendPaymentRejectionEmail(
   eventTitle: string,
   rejectionReason: string
 ) {
-  const appUrl = cleanEnv(process.env.NEXTAUTH_URL) || "http://localhost:3000";
+  const appUrl = getBaseUrl();
   const html = renderHeritageTemplate(
     "Payment Verification Notice",
     `
@@ -507,7 +528,7 @@ export async function sendPaymentResubmitEmail(
   eventTitle: string,
   resubmitReason: string
 ) {
-  const appUrl = cleanEnv(process.env.NEXTAUTH_URL) || "http://localhost:3000";
+  const appUrl = getBaseUrl();
   const html = renderHeritageTemplate(
     "Resubmission Required: Payment Proof",
     `

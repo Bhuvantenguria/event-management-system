@@ -129,12 +129,36 @@ export const authOptions: NextAuthOptions = {
       return session;
     },
     async redirect({ url, baseUrl }) {
-      if (url.startsWith("/")) return `${baseUrl}${url}`;
+      const prodUrl = "https://event-management-system-kappa-gold.vercel.app";
+      const envUrl = process.env.NEXTAUTH_URL;
+      const targetBase =
+        envUrl && !envUrl.includes("localhost")
+          ? envUrl.replace(/\/+$/, "")
+          : baseUrl && !baseUrl.includes("localhost")
+          ? baseUrl.replace(/\/+$/, "")
+          : prodUrl;
+
+      if (url.startsWith("/")) {
+        return `${targetBase}${url}`;
+      }
+
       try {
         const urlObj = new URL(url);
-        if (urlObj.origin === baseUrl) return url;
+        const allowedHosts = [
+          "event-management-system-kappa-gold.vercel.app",
+          new URL(targetBase).hostname,
+        ];
+        if (process.env.VERCEL_URL) {
+          try {
+            allowedHosts.push(new URL(`https://${process.env.VERCEL_URL}`).hostname);
+          } catch {}
+        }
+        if (allowedHosts.includes(urlObj.hostname)) {
+          return url;
+        }
       } catch {}
-      return baseUrl || "/";
+
+      return `${targetBase}/`;
     },
   },
   secret: process.env.NEXTAUTH_SECRET || "affinity-aiims-secret-key-2026-prod",
