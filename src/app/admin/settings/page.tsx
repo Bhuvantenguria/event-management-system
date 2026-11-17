@@ -14,6 +14,11 @@ import {
   Loader2,
   Eye,
   ShieldCheck,
+  Mail,
+  Send,
+  RefreshCw,
+  Activity,
+  Server,
 } from "lucide-react";
 
 export default function AdminSettingsPage() {
@@ -31,6 +36,33 @@ export default function AdminSettingsPage() {
   const [isUploadingQr, setIsUploadingQr] = useState(false);
   const [uploadError, setUploadError] = useState("");
 
+  // Gmail SMTP Diagnostics State
+  const [smtpStatus, setSmtpStatus] = useState<any>(null);
+  const [isCheckingSmtp, setIsCheckingSmtp] = useState(false);
+  const [smtpVerifyResult, setSmtpVerifyResult] = useState<{
+    success: boolean;
+    message: string;
+  } | null>(null);
+  const [testEmailTarget, setTestEmailTarget] = useState("");
+  const [isSendingTestEmail, setIsSendingTestEmail] = useState(false);
+  const [testEmailResult, setTestEmailResult] = useState<{
+    success: boolean;
+    message: string;
+  } | null>(null);
+
+  const loadSmtpStatus = async () => {
+    try {
+      const res = await fetch("/api/admin/email");
+      if (res.ok) {
+        const data = await res.json();
+        setSmtpStatus(data);
+        if (data.smtpUser && !testEmailTarget) {
+          setTestEmailTarget(data.smtpUser);
+        }
+      }
+    } catch {}
+  };
+
   useEffect(() => {
     fetch("/api/admin/qr-settings")
       .then((res) => res.json())
@@ -44,7 +76,75 @@ export default function AdminSettingsPage() {
         }
       })
       .catch(() => {});
+
+    loadSmtpStatus();
   }, []);
+
+  const handleVerifySmtp = async () => {
+    setIsCheckingSmtp(true);
+    setSmtpVerifyResult(null);
+    try {
+      const res = await fetch("/api/admin/email", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "verify" }),
+      });
+      const data = await res.json();
+      setSmtpVerifyResult({
+        success: data.connected === true,
+        message: data.message || (data.connected ? "Connection verified!" : "Handshake failed."),
+      });
+      loadSmtpStatus();
+    } catch (err: any) {
+      setSmtpVerifyResult({
+        success: false,
+        message: err?.message || "Failed to contact SMTP verification endpoint.",
+      });
+    } finally {
+      setIsCheckingSmtp(false);
+    }
+  };
+
+  const handleSendTestEmail = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!testEmailTarget.trim()) return;
+
+    setIsSendingTestEmail(true);
+    setTestEmailResult(null);
+
+    try {
+      const res = await fetch("/api/admin/email", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action: "test",
+          recipientEmail: testEmailTarget.trim(),
+        }),
+      });
+      const data = await res.json();
+      if (res.ok && data.success) {
+        setTestEmailResult({
+          success: true,
+          message: data.simulated
+            ? `Email simulated successfully in Dev/Preview mode (No SMTP credentials configured).`
+            : `Live diagnostic email dispatched to ${testEmailTarget}! Message ID: ${data.messageId || "Delivered"}`,
+        });
+      } else {
+        setTestEmailResult({
+          success: false,
+          message: data.error || "Failed to dispatch test notification.",
+        });
+      }
+      loadSmtpStatus();
+    } catch (err: any) {
+      setTestEmailResult({
+        success: false,
+        message: err?.message || "Network error while transmitting test email.",
+      });
+    } finally {
+      setIsSendingTestEmail(false);
+    }
+  };
 
   const handleQrUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -327,6 +427,211 @@ export default function AdminSettingsPage() {
             </div>
           </div>
         </div>
+      </div>
+
+      {/* Gmail SMTP Diagnostics & Dispatch Card */}
+      <div className="rounded-3xl bg-card border-2 border-fest-gold/40 p-6 sm:p-8 space-y-6 shadow-sm">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-border">
+          <div>
+            <div className="inline-flex items-center space-x-1.5 px-3 py-0.5 rounded-full bg-fest-sunset/15 text-fest-sunset text-xs font-semibold mb-1">
+              <Mail className="w-3.5 h-3.5" />
+              <span>Nodemailer Gmail SMTP Engine</span>
+            </div>
+            <h2 className="font-serif text-xl sm:text-2xl font-bold text-foreground flex items-center">
+              Gmail SMTP <span className="gold-gradient-text ml-1.5">Diagnostics &amp; Testing</span>
+            </h2>
+            <p className="text-xs text-muted-foreground">
+              Verify live connectivity with Google SMTP servers and send test emails to validate notifications.
+            </p>
+          </div>
+
+          <div className="flex items-center space-x-2">
+            <button
+              type="button"
+              onClick={handleVerifySmtp}
+              disabled={isCheckingSmtp}
+              className="px-4 py-2 rounded-xl bg-fest-plum hover:bg-fest-burgundy text-white text-xs font-bold border border-fest-gold/40 shadow-sm transition-all flex items-center space-x-1.5 disabled:opacity-50"
+            >
+              {isCheckingSmtp ? (
+                <Loader2 className="w-3.5 h-3.5 animate-spin" />
+              ) : (
+                <Activity className="w-3.5 h-3.5 text-fest-gold-light" />
+              )}
+              <span>{isCheckingSmtp ? "Testing Handshake..." : "Verify Connection"}</span>
+            </button>
+          </div>
+        </div>
+
+        {/* Verification Result Feedback */}
+        {smtpVerifyResult && (
+          <div
+            className={`p-4 rounded-xl text-xs flex items-center space-x-2 ${
+              smtpVerifyResult.success
+                ? "bg-emerald-500/10 border border-emerald-500/30 text-emerald-600 dark:text-emerald-400"
+                : "bg-destructive/10 border border-destructive/30 text-destructive"
+            }`}
+          >
+            {smtpVerifyResult.success ? (
+              <CheckCircle2 className="w-4 h-4 shrink-0" />
+            ) : (
+              <AlertCircle className="w-4 h-4 shrink-0" />
+            )}
+            <p className="font-medium">{smtpVerifyResult.message}</p>
+          </div>
+        )}
+
+        {/* Status Indicators */}
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          <div className="p-4 rounded-2xl bg-background border border-border space-y-1">
+            <span className="text-[10px] uppercase font-bold text-muted-foreground block">
+              Engine Status
+            </span>
+            <div className="flex items-center space-x-2">
+              <span
+                className={`w-2.5 h-2.5 rounded-full ${
+                  smtpStatus?.isConfigured ? "bg-emerald-500 animate-pulse" : "bg-amber-500"
+                }`}
+              />
+              <span className="font-bold text-xs text-foreground">
+                {smtpStatus?.isConfigured ? "Live Gmail SMTP Active" : "Graceful Simulation Mode"}
+              </span>
+            </div>
+            <p className="text-[10px] text-muted-foreground">
+              {smtpStatus?.isConfigured
+                ? "Dispatches real emails to participant inboxes"
+                : "Simulates dispatches in development logs without SMTP error crashes"}
+            </p>
+          </div>
+
+          <div className="p-4 rounded-2xl bg-background border border-border space-y-1">
+            <span className="text-[10px] uppercase font-bold text-muted-foreground block">
+              Sender Address (From)
+            </span>
+            <span className="font-mono text-xs font-semibold text-fest-sunset truncate block">
+              {smtpStatus?.senderAddress || "AffinityAIIMS <swar@aiimsraebareli.edu.in>"}
+            </span>
+            <p className="text-[10px] text-muted-foreground">
+              Displayed in participant inbox header
+            </p>
+          </div>
+
+          <div className="p-4 rounded-2xl bg-background border border-border space-y-1">
+            <span className="text-[10px] uppercase font-bold text-muted-foreground block">
+              Authenticated Account
+            </span>
+            <span className="font-mono text-xs font-semibold text-foreground truncate block">
+              {smtpStatus?.smtpUser || "Not configured (set in .env)"}
+            </span>
+            <p className="text-[10px] text-muted-foreground">
+              Host: {smtpStatus?.smtpHost || "smtp.gmail.com"}:{smtpStatus?.smtpPort || "465"}
+            </p>
+          </div>
+        </div>
+
+        {/* Test Email Dispatch Form */}
+        <form onSubmit={handleSendTestEmail} className="p-5 rounded-2xl bg-background border border-border space-y-4">
+          <h3 className="font-serif text-sm font-bold text-foreground flex items-center">
+            <Send className="w-4 h-4 mr-1.5 text-fest-sunset" />
+            Dispatch Diagnostic Test Email
+          </h3>
+
+          <div className="flex flex-col sm:flex-row gap-3">
+            <input
+              type="email"
+              required
+              value={testEmailTarget}
+              onChange={(e) => setTestEmailTarget(e.target.value)}
+              placeholder="Enter recipient email (e.g. your email to verify reception)"
+              className="flex-1 px-3.5 py-2.5 text-xs rounded-xl bg-card border border-border text-foreground font-mono focus:outline-none focus:ring-2 focus:ring-fest-sunset"
+            />
+            <button
+              type="submit"
+              disabled={isSendingTestEmail}
+              className="px-5 py-2.5 rounded-xl bg-gradient-to-r from-fest-sunset to-fest-burgundy hover:brightness-110 text-white text-xs font-bold shadow-md flex items-center justify-center space-x-1.5 disabled:opacity-50 transition-all shrink-0"
+            >
+              {isSendingTestEmail ? (
+                <Loader2 className="w-3.5 h-3.5 animate-spin" />
+              ) : (
+                <Send className="w-3.5 h-3.5" />
+              )}
+              <span>{isSendingTestEmail ? "Dispatching..." : "Send Test Email"}</span>
+            </button>
+          </div>
+
+          {testEmailResult && (
+            <div
+              className={`p-3.5 rounded-xl text-xs flex items-center space-x-2 ${
+                testEmailResult.success
+                  ? "bg-emerald-500/10 border border-emerald-500/30 text-emerald-600 dark:text-emerald-400"
+                  : "bg-destructive/10 border border-destructive/30 text-destructive"
+              }`}
+            >
+              {testEmailResult.success ? (
+                <CheckCircle2 className="w-4 h-4 shrink-0" />
+              ) : (
+                <AlertCircle className="w-4 h-4 shrink-0" />
+              )}
+              <p className="font-medium">{testEmailResult.message}</p>
+            </div>
+          )}
+        </form>
+
+        {/* Recent Dispatch Audit Log */}
+        {smtpStatus?.logs && smtpStatus.logs.length > 0 && (
+          <div className="space-y-3">
+            <div className="flex items-center justify-between">
+              <h4 className="text-xs font-bold text-foreground">
+                Recent Email Dispatch Logs ({smtpStatus.logs.length})
+              </h4>
+              <button
+                type="button"
+                onClick={loadSmtpStatus}
+                className="text-[10px] text-muted-foreground hover:text-foreground flex items-center space-x-1"
+              >
+                <RefreshCw className="w-3 h-3" />
+                <span>Refresh Logs</span>
+              </button>
+            </div>
+
+            <div className="max-h-60 overflow-y-auto space-y-2 pr-1">
+              {smtpStatus.logs.map((log: any) => (
+                <div
+                  key={log.id}
+                  className="p-3 rounded-xl bg-background border border-border flex flex-col sm:flex-row sm:items-center justify-between text-xs gap-2"
+                >
+                  <div className="space-y-0.5">
+                    <div className="flex items-center space-x-2">
+                      <span
+                        className={`px-2 py-0.5 rounded text-[9px] font-bold uppercase ${
+                          log.status === "sent"
+                            ? "bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30"
+                            : log.status === "simulated"
+                            ? "bg-blue-500/15 text-blue-600 dark:text-blue-400 border border-blue-500/30"
+                            : "bg-destructive/15 text-destructive border border-destructive/30"
+                        }`}
+                      >
+                        {log.status}
+                      </span>
+                      <span className="font-bold text-foreground">{log.type}</span>
+                      <span className="text-[10px] text-muted-foreground font-mono">
+                        → {log.to}
+                      </span>
+                    </div>
+                    <p className="text-[11px] text-muted-foreground truncate max-w-md">
+                      {log.subject}
+                    </p>
+                    {log.error && (
+                      <p className="text-[10px] text-destructive">{log.error}</p>
+                    )}
+                  </div>
+                  <span className="text-[10px] text-muted-foreground font-mono shrink-0">
+                    {new Date(log.timestamp).toLocaleTimeString()}
+                  </span>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

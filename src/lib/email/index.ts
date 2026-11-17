@@ -5,33 +5,119 @@ export interface EmailOptions {
   subject: string;
   html: string;
   text?: string;
+  replyTo?: string;
 }
 
-// In-Memory Email Dispatch Log
-export const emailDispatchLogs: Array<{
+// In-Memory Email Dispatch Log for diagnostics and audit
+export interface EmailDispatchLog {
   id: string;
   to: string;
   subject: string;
   type: string;
   status: "sent" | "simulated" | "failed";
   timestamp: string;
+  messageId?: string;
   error?: string;
-}> = [];
+}
 
-function createTransporter() {
-  const host = process.env.SMTP_HOST || "smtp.gmail.com";
-  const port = parseInt(process.env.SMTP_PORT || "465", 10);
-  const secure = process.env.SMTP_SECURE !== "false";
-  const user = process.env.SMTP_USER;
-  const pass = process.env.SMTP_PASS;
+export const emailDispatchLogs: EmailDispatchLog[] = [];
 
-  if (!user || !pass || pass === "your_google_app_password") {
-    // Returns null to simulate email gracefully in dev/preview without crashing
+function cleanEnv(val?: string): string {
+  if (!val) return "";
+  const trimmed = val.trim();
+  if (
+    (trimmed.startsWith('"') && trimmed.endsWith('"') && trimmed.indexOf('"', 1) === trimmed.length - 1) ||
+    (trimmed.startsWith("'") && trimmed.endsWith("'") && trimmed.indexOf("'", 1) === trimmed.length - 1)
+  ) {
+    return trimmed.slice(1, -1).trim();
+  }
+  return trimmed;
+}
+
+/**
+ * Checks whether valid Gmail SMTP credentials have been provided in the environment.
+ */
+export function isSmtpConfigured(): boolean {
+  const user = cleanEnv(process.env.SMTP_USER);
+  const pass = cleanEnv(process.env.SMTP_PASS);
+
+  if (!user || !pass) return false;
+  if (
+    pass === "your_google_app_password" ||
+    pass === "your_16_character_google_app_password" ||
+    pass.includes("your_") ||
+    pass.includes("placeholder")
+  ) {
+    return false;
+  }
+  return true;
+}
+
+/**
+ * Returns the sanitized sender address.
+ * Gmail SMTP requires that the "from" address matches the authenticated Gmail user.
+ */
+export function getSenderAddress(): string {
+  const appName = cleanEnv(process.env.NEXT_PUBLIC_APP_NAME) || "AffinityAIIMS '26";
+  const user = cleanEnv(process.env.SMTP_USER);
+
+  if (process.env.EMAIL_FROM && process.env.EMAIL_FROM.trim()) {
+    return process.env.EMAIL_FROM.trim();
+  }
+
+  const email = user || "swar@aiimsraebareli.edu.in";
+  return `"${appName}" <${email}>`;
+}
+
+/**
+ * Creates and configures a Nodemailer transporter.
+ * Robustly handles:
+ *  1. Google App Passwords copied with spaces (e.g. "abcd efgh ijkl mnop") -> sanitized to "abcdefghijklmnop".
+ *  2. Gmail service preset vs custom host/port settings.
+ *  3. Port 465 (SSL direct, secure: true) vs Port 587 (TLS/STARTTLS, secure: false).
+ *  4. Graceful simulation mode when credentials are absent or placeholders.
+ */
+export function createTransporter() {
+  if (!isSmtpConfigured()) {
+    // Return null to simulate email gracefully in dev/preview without crashing
     return null;
   }
 
+  const user = cleanEnv(process.env.SMTP_USER);
+  // Strip all whitespace from the Google App Password
+  const pass = cleanEnv(process.env.SMTP_PASS).replace(/\s+/g, "");
+
+  const rawHost = cleanEnv(process.env.SMTP_HOST) || "smtp.gmail.com";
+  const port = parseInt(cleanEnv(process.env.SMTP_PORT) || "465", 10);
+
+  const isGmail =
+    rawHost.toLowerCase().includes("gmail") ||
+    process.env.SMTP_SERVICE?.toLowerCase() === "gmail" ||
+    user.toLowerCase().endsWith("@gmail.com");
+
+  // For Gmail on default port 465, Nodemailer's native service configuration is optimal
+  if (isGmail && (!process.env.SMTP_PORT || port === 465)) {
+    return nodemailer.createTransport({
+      service: "gmail",
+      auth: {
+        user,
+        pass,
+      },
+      tls: {
+        rejectUnauthorized: false,
+      },
+    });
+  }
+
+  // Handle port 587 vs 465
+  const isPort465 = port === 465;
+  const secure =
+    process.env.SMTP_SECURE !== undefined
+      ? process.env.SMTP_SECURE === "true" || process.env.SMTP_SECURE === "1"
+      : isPort465;
+
   return nodemailer.createTransport({
-    host,
+    host: rawHost,
     port,
     secure,
     auth: {
@@ -44,7 +130,75 @@ function createTransporter() {
   });
 }
 
+/**
+ * Performs a live handshake verification with the SMTP server.
+ */
+export async function verifySmtpConnection(): Promise<{
+  configured: boolean;
+  connected: boolean;
+  message: string;
+  user?: string;
+  host?: string;
+  port?: number;
+  error?: string;
+}> {
+  if (!isSmtpConfigured()) {
+    return {
+      configured: false,
+      connected: false,
+      message:
+        "Gmail SMTP credentials are not configured in environment variables. Email notifications will operate in graceful simulation mode.",
+    };
+  }
+
+  const transporter = createTransporter();
+  if (!transporter) {
+    return {
+      configured: false,
+      connected: false,
+      message: "Failed to initialize email transporter.",
+    };
+  }
+
+  const user = cleanEnv(process.env.SMTP_USER);
+  const host = cleanEnv(process.env.SMTP_HOST) || "smtp.gmail.com";
+  const port = parseInt(cleanEnv(process.env.SMTP_PORT) || "465", 10);
+
+  try {
+    await transporter.verify();
+    return {
+      configured: true,
+      connected: true,
+      message: `Gmail SMTP connection established successfully! Ready to dispatch live emails as ${user}.`,
+      user,
+      host,
+      port,
+    };
+  } catch (error: any) {
+    const errorMsg = error?.message || String(error);
+    console.error("[Email SMTP Verify Error]:", errorMsg);
+    return {
+      configured: true,
+      connected: false,
+      message: `SMTP connection failed: ${errorMsg}`,
+      user,
+      host,
+      port,
+      error: errorMsg,
+    };
+  }
+}
+
+/**
+ * Renders the responsive AffinityAIIMS Royal & Heritage email layout.
+ */
 function renderHeritageTemplate(title: string, contentHtml: string): string {
+  const appName = cleanEnv(process.env.NEXT_PUBLIC_APP_NAME) || "AffinityAIIMS '26";
+  const appTagline =
+    cleanEnv(process.env.NEXT_PUBLIC_APP_TAGLINE) ||
+    "AIIMS Raebareli Annual Inter-Collegiate Cultural Festival";
+  const appUrl = cleanEnv(process.env.NEXTAUTH_URL) || "http://localhost:3000";
+
   return `
 <!DOCTYPE html>
 <html lang="en">
@@ -53,29 +207,34 @@ function renderHeritageTemplate(title: string, contentHtml: string): string {
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>${title}</title>
   <style>
-    body { margin: 0; padding: 0; background-color: #F5EEDC; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; color: #252321; }
-    .container { max-width: 600px; margin: 30px auto; background-color: #FAF6EE; border: 1px solid #C5A15A; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 15px rgba(112, 43, 50, 0.1); }
-    .header { background-color: #702B32; padding: 24px; text-align: center; border-bottom: 2px solid #C5A15A; }
-    .header h1 { margin: 0; font-family: Georgia, serif; color: #DFC283; font-size: 24px; }
-    .header p { margin: 4px 0 0; color: #F5EEDC; font-size: 11px; text-transform: uppercase; letter-spacing: 2px; }
-    .body { padding: 32px 24px; font-size: 14px; line-height: 1.6; color: #252321; }
-    .footer { background-color: #252321; color: #F5EEDC; padding: 18px 24px; font-size: 11px; text-align: center; border-top: 1px solid #C5A15A; }
-    .btn { display: inline-block; background-color: #702B32; color: #F5EEDC !important; text-decoration: none; padding: 12px 24px; border-radius: 6px; font-weight: bold; border: 1px solid #C5A15A; margin: 16px 0; }
-    .info-box { background-color: #EFE6D2; border-left: 4px solid #C5A15A; padding: 12px 16px; margin: 16px 0; border-radius: 4px; }
+    body { margin: 0; padding: 0; background-color: #191820; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; color: #F5E8D0; }
+    .container { max-width: 600px; margin: 30px auto; background-color: #24222C; border: 1px solid #D4AD63; border-radius: 16px; overflow: hidden; box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5); }
+    .header { background: linear-gradient(135deg, #681F38 0%, #402044 100%); padding: 28px 24px; text-align: center; border-bottom: 2px solid #D4AD63; }
+    .header h1 { margin: 0; font-family: Georgia, serif; color: #D4AD63; font-size: 26px; font-weight: 800; letter-spacing: 0.5px; }
+    .header p { margin: 6px 0 0; color: #F5E8D0; font-size: 11px; text-transform: uppercase; letter-spacing: 2px; }
+    .body { padding: 32px 28px; font-size: 14px; line-height: 1.7; color: #E8E0D2; }
+    .body strong { color: #FFFFFF; }
+    .body h2 { font-family: Georgia, serif; color: #D4AD63; margin-top: 0; font-size: 20px; }
+    .footer { background-color: #15141B; color: #A89E90; padding: 22px 24px; font-size: 11px; text-align: center; border-top: 1px solid rgba(212, 173, 99, 0.3); }
+    .btn { display: inline-block; background: linear-gradient(135deg, #E87545 0%, #681F38 100%); color: #FFFFFF !important; text-decoration: none; padding: 13px 28px; border-radius: 8px; font-weight: bold; border: 1px solid #D4AD63; margin: 20px 0; text-align: center; font-size: 13px; }
+    .info-box { background-color: #2E2B38; border-left: 4px solid #D4AD63; padding: 14px 18px; margin: 18px 0; border-radius: 6px; color: #F5E8D0; font-size: 13px; }
+    .warning-box { background-color: #38242A; border-left: 4px solid #E87545; padding: 14px 18px; margin: 18px 0; border-radius: 6px; color: #F5E8D0; font-size: 13px; }
+    .ticket-badge { display: inline-block; background-color: #3E1825; border: 1px dashed #D4AD63; padding: 6px 14px; border-radius: 6px; font-family: monospace; color: #E87545; font-size: 14px; font-weight: bold; margin: 6px 0; }
   </style>
 </head>
 <body>
   <div class="container">
     <div class="header">
-      <h1>Rangmanch '26</h1>
-      <p>Uttar Pradesh Culture & Heritage College Festival</p>
+      <h1>${appName}</h1>
+      <p>${appTagline}</p>
     </div>
     <div class="body">
       ${contentHtml}
     </div>
     <div class="footer">
-      <p>© 2026 Rangmanch UP Cultural Festival Secretariat</p>
-      <p style="color: #DFC283;">A Grand Celebration of Awadhi, Kashi, and Braj Heritage</p>
+      <p>© 2026 AffinityAIIMS • Student Welfare Association Raebareli (SWAR)</p>
+      <p style="color: #D4AD63; margin-top: 4px;">AIIMS Campus, Dalmau Road, Munshiganj, Raebareli, UP 229405</p>
+      <p style="font-size: 10px; color: #887E70; margin-top: 6px;">Festival Secretariat: swar@aiimsraebareli.edu.in</p>
     </div>
   </div>
 </body>
@@ -83,24 +242,30 @@ function renderHeritageTemplate(title: string, contentHtml: string): string {
   `;
 }
 
+/**
+ * Universal email dispatcher supporting both live Gmail SMTP and graceful dev simulation.
+ */
 export async function sendMail(
   options: EmailOptions,
   type = "general"
-): Promise<{ success: boolean; simulated?: boolean; messageId?: string }> {
-  const from = process.env.EMAIL_FROM || '"Rangmanch UP Cultural Fest" <fest.cultural.up@gmail.com>';
+): Promise<{ success: boolean; simulated?: boolean; messageId?: string; error?: string }> {
+  const from = getSenderAddress();
   const transporter = createTransporter();
 
   if (!transporter) {
     // Graceful simulation when Gmail SMTP credentials are not yet configured in env
-    const logItem = {
-      id: `mail-${Date.now()}`,
+    const logItem: EmailDispatchLog = {
+      id: `mail-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
       to: options.to,
       subject: options.subject,
       type,
-      status: "simulated" as const,
+      status: "simulated",
       timestamp: new Date().toISOString(),
     };
     emailDispatchLogs.unshift(logItem);
+    console.log(
+      `[Email Simulated] Dispatched '${type}' notification to ${options.to} (Subject: "${options.subject}")`
+    );
     return { success: true, simulated: true };
   }
 
@@ -111,51 +276,167 @@ export async function sendMail(
       subject: options.subject,
       html: options.html,
       text: options.text || options.subject,
+      replyTo: options.replyTo || "swar@aiimsraebareli.edu.in",
     });
 
-    emailDispatchLogs.unshift({
-      id: `mail-${Date.now()}`,
+    const logItem: EmailDispatchLog = {
+      id: `mail-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
       to: options.to,
       subject: options.subject,
       type,
       status: "sent",
       timestamp: new Date().toISOString(),
-    });
+      messageId: info.messageId,
+    };
+    emailDispatchLogs.unshift(logItem);
+    console.log(
+      `[Email Sent] Successfully delivered '${type}' email to ${options.to} (MessageId: ${info.messageId})`
+    );
 
     return { success: true, messageId: info.messageId };
   } catch (error: any) {
-    emailDispatchLogs.unshift({
-      id: `mail-${Date.now()}`,
+    const errorMsg = error?.message || String(error);
+    const logItem: EmailDispatchLog = {
+      id: `mail-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
       to: options.to,
       subject: options.subject,
       type,
       status: "failed",
       timestamp: new Date().toISOString(),
-      error: error.message,
-    });
-    return { success: false };
+      error: errorMsg,
+    };
+    emailDispatchLogs.unshift(logItem);
+    console.error(`[Email Failed] Delivery failure for '${type}' to ${options.to}:`, errorMsg);
+    return { success: false, error: errorMsg };
   }
 }
 
-// 1. Welcome Email
+// 1. Welcome Email for New Account
 export async function sendWelcomeEmail(to: string, name: string) {
+  const appUrl = cleanEnv(process.env.NEXTAUTH_URL) || "http://localhost:3000";
   const html = renderHeritageTemplate(
-    "Welcome to Rangmanch UP 2026",
+    "Welcome to AffinityAIIMS '26",
     `
-      <h2 style="font-family: Georgia, serif; color: #702B32;">Pranam ${name},</h2>
-      <p>Welcome to <strong>Rangmanch UP 2026</strong>! Your participant account has been successfully created.</p>
-      <p>Explore over 40+ competitions across performing arts, athletics, literature, hackathons, and regional crafts.</p>
+      <h2>Greetings ${name},</h2>
+      <p>Welcome to <strong>AffinityAIIMS '26</strong> — the Annual Inter-Collegiate Cultural Festival organized by the Student Welfare Association of Raebareli (SWAR), AIIMS Raebareli.</p>
+      <p>Your participant account has been successfully initialized. You can now register for 40+ competitions across performing arts, athletics, debates, hackathons, and regional crafts.</p>
       <div class="info-box">
-        <strong>Important Dates:</strong> 12th – 15th March 2026<br>
-        <strong>Venue:</strong> University Heritage Grounds, Lucknow, Uttar Pradesh
+        <strong>Festival Dates:</strong> 12th – 15th March 2026<br>
+        <strong>Venue:</strong> AIIMS Campus, Dalmau Road, Munshiganj, Raebareli, UP 229405<br>
+        <strong>Organizing Body:</strong> SWAR Council &amp; University Cultural Clubs
       </div>
-      <a href="${process.env.NEXTAUTH_URL || "http://localhost:3000"}/events" class="btn">Explore All Competitions</a>
+      <a href="${appUrl}/events" class="btn">Explore All Competitions</a>
+      <p style="font-size: 12px; color: #A89E90; margin-top: 16px;">
+        For registration assistance or accommodation queries, reach out to our 24/7 student helpline at <strong>swar@aiimsraebareli.edu.in</strong>.
+      </p>
     `
   );
-  return sendMail({ to, subject: "Welcome to Rangmanch UP 2026!", html }, "welcome");
+  return sendMail(
+    {
+      to,
+      subject: "Welcome to AffinityAIIMS '26 – Welcome to Rangmanch UP 2026!",
+      html,
+    },
+    "welcome"
+  );
 }
 
-// 2. Payment Approval & Ticket Delivery Email
+// 2. Event Registration Confirmation Email (Paid or Free)
+export async function sendRegistrationConfirmationEmail(
+  to: string,
+  participantName: string,
+  eventTitle: string,
+  isFree: boolean,
+  amount: number,
+  details?: {
+    participationType?: string;
+    teamName?: string;
+    ticketNumber?: string;
+    qrToken?: string;
+  }
+) {
+  const appUrl = cleanEnv(process.env.NEXTAUTH_URL) || "http://localhost:3000";
+
+  const freeContent = `
+    <h2>Registration Confirmed: ${eventTitle}</h2>
+    <p>Dear <strong>${participantName}</strong>,</p>
+    <p>Your registration for <strong>${eventTitle}</strong> has been officially confirmed! Since this is a complimentary festival event, your digital QR pass has been generated immediately.</p>
+    <div class="info-box">
+      <strong>Ticket Number:</strong> ${details?.ticketNumber || "CONFIRMED"}<br>
+      <strong>Entry Security Token:</strong> <span class="ticket-badge">${details?.qrToken || "READY-AT-DOOR"}</span><br>
+      <strong>Format:</strong> ${details?.participationType === "team" ? `Team (${details.teamName || "Squad"})` : "Individual"}
+    </div>
+    <a href="${appUrl}/dashboard/tickets" class="btn">Access Digital QR Pass</a>
+  `;
+
+  const paidContent = `
+    <h2>Registration Received: ${eventTitle}</h2>
+    <p>Dear <strong>${participantName}</strong>,</p>
+    <p>We have received your registration for <strong>${eventTitle}</strong>. Please complete your manual Paytm UPI fee transfer to confirm your entry slot.</p>
+    <div class="info-box">
+      <strong>Event Fee:</strong> ₹${amount}<br>
+      <strong>Participation:</strong> ${details?.participationType === "team" ? `Team: ${details.teamName || "Squad"}` : "Individual"}<br>
+      <strong>Status:</strong> Awaiting Paytm UPI Verification
+    </div>
+    <div class="warning-box">
+      <strong>Next Step:</strong> Scan the festival organizer Paytm QR code on your dashboard, copy your 12-digit transaction UTR reference number, and upload your payment receipt screenshot.
+    </div>
+    <a href="${appUrl}/dashboard/payments" class="btn">Submit Paytm UPI Proof</a>
+  `;
+
+  const html = renderHeritageTemplate(
+    `Registration: ${eventTitle}`,
+    isFree ? freeContent : paidContent
+  );
+
+  return sendMail(
+    {
+      to,
+      subject: isFree
+        ? `[Confirmed] Registration & QR Pass for ${eventTitle}`
+        : `[Action Required] Complete Paytm UPI Payment for ${eventTitle}`,
+      html,
+    },
+    "registration"
+  );
+}
+
+// 3. Payment Proof Submitted Notification
+export async function sendPaymentSubmittedEmail(
+  to: string,
+  participantName: string,
+  eventTitle: string,
+  utrNumber: string,
+  amount: number
+) {
+  const appUrl = cleanEnv(process.env.NEXTAUTH_URL) || "http://localhost:3000";
+  const html = renderHeritageTemplate(
+    "Payment Proof Under Verification",
+    `
+      <h2>Payment Proof Received</h2>
+      <p>Dear <strong>${participantName}</strong>,</p>
+      <p>Your manual Paytm UPI payment proof for <strong>${eventTitle}</strong> has been received and queued for finance audit.</p>
+      <div class="info-box">
+        <strong>Event:</strong> ${eventTitle}<br>
+        <strong>Amount Submitted:</strong> ₹${amount}<br>
+        <strong>12-Digit UTR / Ref No:</strong> <code style="color: #E87545; font-family: monospace;">${utrNumber}</code><br>
+        <strong>Status:</strong> Pending Finance Verification (usually 1–4 hours)
+      </div>
+      <p>Once approved, your cryptographic QR entry ticket will be generated automatically and sent to your email and participant dashboard.</p>
+      <a href="${appUrl}/dashboard/payments" class="btn">Check Verification Status</a>
+    `
+  );
+  return sendMail(
+    {
+      to,
+      subject: `Payment Proof Received for ${eventTitle} (UTR: ${utrNumber})`,
+      html,
+    },
+    "payment_submitted"
+  );
+}
+
+// 4. Payment Approval & Ticket Delivery Email
 export async function sendPaymentApprovalEmail(
   to: string,
   participantName: string,
@@ -163,66 +444,182 @@ export async function sendPaymentApprovalEmail(
   ticketNumber: string,
   qrToken: string
 ) {
+  const appUrl = cleanEnv(process.env.NEXTAUTH_URL) || "http://localhost:3000";
   const html = renderHeritageTemplate(
-    "Payment Approved - Your QR Ticket is Ready",
+    "Payment Verified - Your QR Ticket is Ready",
     `
-      <h2 style="font-family: Georgia, serif; color: #702B32;">Congratulations ${participantName}!</h2>
-      <p>Your manual Paytm UPI payment for <strong>${eventTitle}</strong> has been officially verified and approved by our finance committee.</p>
+      <h2>Congratulations ${participantName}!</h2>
+      <p>Your Paytm UPI payment for <strong>${eventTitle}</strong> has been officially audited and approved by our finance committee.</p>
       <div class="info-box">
         <strong>Ticket Number:</strong> ${ticketNumber}<br>
-        <strong>Security QR Code Token:</strong> <code style="font-family: monospace;">${qrToken}</code><br>
-        <strong>Status:</strong> Entry Confirmed
+        <strong>Security QR Code Token:</strong><br>
+        <div class="ticket-badge">${qrToken}</div><br>
+        <strong>Status:</strong> Entry Confirmed &amp; Pass Active
       </div>
-      <p>Your digital QR entry pass is now accessible on your participant dashboard.</p>
-      <a href="${process.env.NEXTAUTH_URL || "http://localhost:3000"}/dashboard/tickets" class="btn">View & Download QR Ticket</a>
+      <p>Your high-resolution digital entry QR ticket is ready for download and offline printing from your student dashboard.</p>
+      <a href="${appUrl}/dashboard/tickets" class="btn">View &amp; Download QR Ticket</a>
     `
   );
   return sendMail(
-    { to, subject: `[Confirmed] Payment Verified & Ticket Issued for ${eventTitle}`, html },
+    {
+      to,
+      subject: `[Confirmed] Payment Verified & Ticket Issued for ${eventTitle}`,
+      html,
+    },
     "payment_approved"
   );
 }
 
-// 3. Payment Rejection Email
+// 5. Payment Rejection Email
 export async function sendPaymentRejectionEmail(
   to: string,
   participantName: string,
   eventTitle: string,
   rejectionReason: string
 ) {
+  const appUrl = cleanEnv(process.env.NEXTAUTH_URL) || "http://localhost:3000";
   const html = renderHeritageTemplate(
     "Payment Verification Notice",
     `
-      <h2 style="font-family: Georgia, serif; color: #702B32;">Hello ${participantName},</h2>
-      <p>Our finance administration reviewed your submitted payment proof for <strong>${eventTitle}</strong>. Unfortunately, it could not be approved due to the following reason:</p>
-      <div class="info-box" style="border-left-color: #8D3535; background-color: #F8E8E8;">
+      <h2>Hello ${participantName},</h2>
+      <p>Our finance administration reviewed your submitted payment proof for <strong>${eventTitle}</strong>. Unfortunately, the submission could not be verified.</p>
+      <div class="warning-box">
         <strong>Audit Feedback:</strong> ${rejectionReason}
       </div>
-      <p>Please log in to your dashboard to inspect your submission or upload a valid transaction proof.</p>
-      <a href="${process.env.NEXTAUTH_URL || "http://localhost:3000"}/dashboard/payments" class="btn">Review Payment Details</a>
+      <p>If you believe this is in error, please review your transaction details or contact the SWAR finance desk with your banking statement.</p>
+      <a href="${appUrl}/dashboard/payments" class="btn">Review Payment Details</a>
     `
   );
   return sendMail(
-    { to, subject: `Action Required: Payment Verification Update for ${eventTitle}`, html },
+    {
+      to,
+      subject: `Action Required: Payment Verification Update for ${eventTitle}`,
+      html,
+    },
     "payment_rejected"
   );
 }
 
-// 4. Test Email for Admin
-export async function sendTestEmail(to: string) {
+// 6. Payment Resubmission Request Email
+export async function sendPaymentResubmitEmail(
+  to: string,
+  participantName: string,
+  eventTitle: string,
+  resubmitReason: string
+) {
+  const appUrl = cleanEnv(process.env.NEXTAUTH_URL) || "http://localhost:3000";
   const html = renderHeritageTemplate(
-    "Nodemailer Gmail SMTP Diagnostics",
+    "Resubmission Required: Payment Proof",
     `
-      <h2 style="font-family: Georgia, serif; color: #702B32;">Gmail SMTP Operational Check</h2>
-      <p>This is a diagnostic notification sent from the <strong>Rangmanch UP 2026 Festival Administration System</strong>.</p>
-      <div class="info-box">
-        <strong>Host:</strong> ${process.env.SMTP_HOST || "smtp.gmail.com"}<br>
-        <strong>Port:</strong> ${process.env.SMTP_PORT || "465"}<br>
-        <strong>Secure TLS:</strong> ${process.env.SMTP_SECURE || "true"}<br>
-        <strong>Timestamp:</strong> ${new Date().toISOString()}
+      <h2>Action Required: ${participantName}</h2>
+      <p>Our finance administration inspected your payment proof for <strong>${eventTitle}</strong>. A clearer transaction receipt is required before your ticket can be issued.</p>
+      <div class="warning-box">
+        <strong>Organizer Feedback:</strong> ${resubmitReason}
       </div>
-      <p>If you received this message, your Gmail SMTP via Nodemailer is functioning perfectly.</p>
+      <p>Please visit your payment dashboard to upload an official receipt showing the bank timestamp and complete 12-digit UPI reference number.</p>
+      <a href="${appUrl}/dashboard/payments" class="btn">Resubmit Payment Proof</a>
     `
   );
-  return sendMail({ to, subject: "Rangmanch UP 2026: SMTP Test Notification", html }, "smtp_test");
+  return sendMail(
+    {
+      to,
+      subject: `[Action Required] Resubmit Payment Proof for ${eventTitle}`,
+      html,
+    },
+    "payment_resubmit"
+  );
+}
+
+// 7. Password Reset Email
+export async function sendPasswordResetEmail(to: string, resetUrl: string) {
+  const html = renderHeritageTemplate(
+    "Password Reset Request",
+    `
+      <h2>Password Reset Instructions</h2>
+      <p>We received a request to reset the password for your <strong>AffinityAIIMS '26</strong> account.</p>
+      <div class="info-box">
+        Click the button below to establish a new password. This reset link is active for 60 minutes.
+      </div>
+      <a href="${resetUrl}" class="btn">Reset My Password</a>
+      <p style="font-size: 11px; color: #A89E90; margin-top: 16px;">
+        If you did not request a password reset, you can safely ignore this notification. Your account remains secure.
+      </p>
+    `
+  );
+  return sendMail(
+    {
+      to,
+      subject: "AffinityAIIMS '26: Password Reset Request",
+      html,
+    },
+    "password_reset"
+  );
+}
+
+// 8. Contact Inquiry Notification Email
+export async function sendContactInquiryNotification(
+  name: string,
+  email: string,
+  college: string,
+  subject: string,
+  message: string
+) {
+  const recipient = cleanEnv(process.env.SMTP_USER) || "swar@aiimsraebareli.edu.in";
+  const html = renderHeritageTemplate(
+    `Helpdesk Inquiry: ${subject}`,
+    `
+      <h2>New Helpdesk Inquiry</h2>
+      <div class="info-box">
+        <strong>Sender Name:</strong> ${name}<br>
+        <strong>Email:</strong> ${email}<br>
+        <strong>College / Institute:</strong> ${college || "Not specified"}<br>
+        <strong>Subject:</strong> ${subject}
+      </div>
+      <p style="white-space: pre-line; background: #2E2B38; padding: 16px; border-radius: 8px;">
+        ${message}
+      </p>
+    `
+  );
+  return sendMail(
+    {
+      to: recipient,
+      subject: `[Helpdesk Ticket] ${subject} (from ${name})`,
+      html,
+      replyTo: email,
+    },
+    "contact_inquiry"
+  );
+}
+
+// 9. Diagnostic Test Email
+export async function sendTestEmail(to: string) {
+  const host = cleanEnv(process.env.SMTP_HOST) || "smtp.gmail.com";
+  const port = cleanEnv(process.env.SMTP_PORT) || "465";
+  const user = cleanEnv(process.env.SMTP_USER) || "Not configured";
+  const sender = getSenderAddress();
+
+  const html = renderHeritageTemplate(
+    "Gmail SMTP Operational Check",
+    `
+      <h2>Gmail SMTP Operational Diagnostics</h2>
+      <p>This is a live diagnostic notification dispatched from the <strong>AffinityAIIMS '26 Festival Administration Platform</strong>.</p>
+      <div class="info-box">
+        <strong>Status:</strong> Gmail SMTP Connected &amp; Operational<br>
+        <strong>Host:</strong> ${host}<br>
+        <strong>Port:</strong> ${port}<br>
+        <strong>Authenticated User:</strong> ${user}<br>
+        <strong>From Header:</strong> ${sender}<br>
+        <strong>Dispatched At:</strong> ${new Date().toISOString()}
+      </div>
+      <p>If you received this message in your inbox, your Nodemailer Gmail SMTP pipeline is functioning with 100% reliability.</p>
+    `
+  );
+  return sendMail(
+    {
+      to,
+      subject: "AffinityAIIMS '26: Gmail SMTP Operational Test",
+      html,
+    },
+    "smtp_test"
+  );
 }

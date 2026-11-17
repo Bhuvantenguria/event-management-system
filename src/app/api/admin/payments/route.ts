@@ -4,7 +4,11 @@ import { authOptions } from "@/lib/auth";
 import { dataStore } from "@/lib/data-store";
 import { syncWithMongo } from "@/lib/db-sync";
 import { hasRole } from "@/lib/permissions";
-import { sendPaymentApprovalEmail, sendPaymentRejectionEmail } from "@/lib/email";
+import {
+  sendPaymentApprovalEmail,
+  sendPaymentRejectionEmail,
+  sendPaymentResubmitEmail,
+} from "@/lib/email";
 
 export async function GET(request: Request) {
   const session = await getServerSession(authOptions);
@@ -85,7 +89,14 @@ export async function POST(request: Request) {
             ticket.qrToken
           ).catch((err) => console.warn("Payment approval email notice:", err?.message || err));
         }
-      } else if (action === "reject" || action === "resubmit") {
+      } else if (action === "resubmit") {
+        sendPaymentResubmitEmail(
+          reg.userEmail,
+          reg.userName,
+          reg.eventTitle,
+          rejectionReason || "Please upload a clearer receipt screenshot showing the 12-digit UTR."
+        ).catch((err) => console.warn("Payment resubmission email notice:", err?.message || err));
+      } else if (action === "reject") {
         sendPaymentRejectionEmail(
           reg.userEmail,
           reg.userName,

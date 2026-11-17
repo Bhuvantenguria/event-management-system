@@ -3,6 +3,7 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { dataStore } from "@/lib/data-store";
 import { syncWithMongo } from "@/lib/db-sync";
+import { sendPaymentSubmittedEmail } from "@/lib/email";
 
 export async function POST(request: Request) {
   const session = await getServerSession(authOptions);
@@ -117,6 +118,17 @@ export async function POST(request: Request) {
 
     // Ensure payment submission is saved to MongoDB Atlas
     await dataStore.flushPending();
+
+    // Trigger non-blocking transactional payment proof received email
+    sendPaymentSubmittedEmail(
+      session.user.email,
+      session.user.name || "Participant",
+      reg.eventTitle,
+      utrNumber.trim(),
+      Number(amountSubmitted) || reg.amount
+    ).catch((err) => {
+      console.warn("Payment submission email notice:", err?.message || err);
+    });
 
     return NextResponse.json({
       success: true,

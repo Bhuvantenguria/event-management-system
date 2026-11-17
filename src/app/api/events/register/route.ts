@@ -3,6 +3,7 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { dataStore } from "@/lib/data-store";
 import { syncWithMongo } from "@/lib/db-sync";
+import { sendRegistrationConfirmationEmail } from "@/lib/email";
 
 export async function POST(request: Request) {
   const session = await getServerSession(authOptions);
@@ -64,12 +65,30 @@ export async function POST(request: Request) {
     });
 
     // If free event, generate digital ticket immediately
+    let issuedTicket: any = undefined;
     if (isFree) {
-      dataStore.createTicketForRegistration(newReg);
+      issuedTicket = dataStore.createTicketForRegistration(newReg);
     }
 
     // Flush registration & optional ticket to MongoDB Atlas
     await dataStore.flushPending();
+
+    // Trigger non-blocking transactional confirmation email
+    sendRegistrationConfirmationEmail(
+      userEmail,
+      userName,
+      eventTitle,
+      isFree,
+      amount || 0,
+      {
+        participationType,
+        teamName,
+        ticketNumber: issuedTicket?.ticketNumber,
+        qrToken: issuedTicket?.qrToken,
+      }
+    ).catch((err) => {
+      console.warn("Registration email dispatch notice:", err?.message || err);
+    });
 
     return NextResponse.json({
       success: true,

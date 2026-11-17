@@ -434,10 +434,68 @@
        - Enforced client-side blocking: form rejects submission with a clear error if screenshot receipt is missing.
        - Enforced server-side validation: `/api/payments/submit` rejects empty or trimmed screenshot URLs with HTTP 400.
        - Enhanced UI: Added clear `* (Compulsory / अनिवार्य)` badge, upload confirmation badges, and mandatory instructions.
-- **Final Verification**:
+- **Verification**:
   - `npx tsc --noEmit`: 0 TypeScript errors.
   - `npx vitest run`: 37/37 tests passing across all 8 test suites (100% pass rate).
   - Production build: Successfully compiled across all dynamic and static routes.
+
+---
+
+### Phase 17: Gmail SMTP Sending System Overhaul, UI/Backend Flow Diagnostics & Testing
+- **Status**: Completed
+- **Why**: Fix the Gmail SMTP email dispatch system that was not delivering emails reliably, resolve configuration traps with Google App Passwords and TLS/SSL ports, add missing email notifications across all user journeys, provide admin testing diagnostics, and thoroughly test all UI and backend flows without altering any existing flow.
+- **Root Cause Analysis of Gmail Sending Issues**:
+  1. *Google App Password Space Formatting*: Google generates 16-character App Passwords formatted as 4-character chunks separated by spaces (`abcd efgh ijkl mnop`). When users pasted this into `.env`, Nodemailer sent the raw password with spaces, prompting Google SMTP servers to reject the authentication with `535-5.7.8 Username and Password not accepted`.
+  2. *Port 587 vs 465 TLS/SSL Conflict*: In Nodemailer, port 465 requires direct SSL (`secure: true`), while port 587 requires STARTTLS (`secure: false`). The previous transporter configuration evaluated `secure = process.env.SMTP_SECURE !== "false"`, which defaulted `secure` to `true` even on port 587, leading to immediate handshake errors or socket timeouts.
+  3. *Mismatched Sender Header ("from")*: Google SMTP requires that the envelope `from` address matches the authenticated `SMTP_USER` Gmail account or an alias. The previous implementation defaulted fallback `from` to an outdated address (`fest.cultural.up@gmail.com`), causing Google to either rewrite or reject outgoing mail with SPF/DMARC flags.
+  4. *Silent Error Swallowing in `sendMail`*: In the catch block, `sendMail` returned `{ success: false }` with no error message and no console logging, leaving developers and administrators blind to authentication, connection, or quota errors.
+  5. *Outdated Email Branding*: All HTML email templates were still using legacy `Rangmanch UP 2026` branding with Lucknow venues instead of the modern `AffinityAIIMS '26` (AIIMS Raebareli) festival palette and official secretariat address (`swar@aiimsraebareli.edu.in`).
+  6. *Missing Transactional Notifications Across Lifecycles*:
+     - Event registration confirmation emails were not being triggered.
+     - Free event instant digital ticket notifications were missing.
+     - Paytm payment proof submission receipts were not dispatched to students.
+     - Resubmission requests from admins incorrectly sent rejection emails instead of resubmission instructions.
+     - Password reset and contact helpdesk forms were not wired to backend email delivery.
+- **Key Technical Implementations & Flow Hardening**:
+  - **Robust Nodemailer Gmail Engine (`src/lib/email/index.ts`)**:
+    - **Credential Sanitization**: Automatically removes internal spaces and outer quotes from Google App Passwords (`pass.replace(/\s+/g, "")`).
+    - **Native Gmail Service Support**: Uses Nodemailer's native `service: "gmail"` profile when connecting to Gmail on port 465 or default, providing optimal socket pooling and Google-tailored TLS cipher negotiation.
+    - **Port-Aware TLS Negotiation**: Properly pairs port 465 with `secure: true` and port 587 with `secure: false`, respecting explicit overrides in `SMTP_SECURE`.
+    - **Dynamic Sender Resolution (`getSenderAddress`)**: Dynamically aligns the `from` header to `process.env.EMAIL_FROM || '"AffinityAIIMS \'26" <${user}>'`, preventing Google SMTP spoofing rejections.
+    - **Comprehensive Error Auditing**: Returns `{ success: false, error: error.message }` and logs errors with `console.error` while capturing timestamped audit records in `emailDispatchLogs`.
+    - **Handshake Verification Function (`verifySmtpConnection`)**: Provides a live `transporter.verify()` check to test connectivity without having to trigger a dummy email.
+  - **AffinityAIIMS Royal Heritage Email Templates**:
+    - Built responsive, dark-mode luxury HTML templates with Burgundy (`#681F38`), Royal Plum (`#402044`), Antique Gold (`#D4AD63`), and Champagne (`#F5E8D0`) color accents matching the platform design tokens.
+    - Implemented 9 distinct email functions:
+      1. `sendWelcomeEmail`: Welcome and festival orientation for new participants.
+      2. `sendRegistrationConfirmationEmail`: Event registration receipt with format, fee, and instant ticket pass for free events.
+      3. `sendPaymentSubmittedEmail`: Acknowledgment of Paytm UPI proof submission with 12-digit UTR and audit status.
+      4. `sendPaymentApprovalEmail`: Official approval notice with ticket number and cryptographic QR token.
+      5. `sendPaymentRejectionEmail`: Rejection notice with finance committee audit feedback.
+      6. `sendPaymentResubmitEmail`: Resubmission notice instructing students to upload a clearer receipt without cancelling registration.
+      7. `sendPasswordResetEmail`: 60-minute password reset link with security guidelines.
+      8. `sendContactInquiryNotification`: Automated dispatch of helpdesk inquiries to festival secretariat.
+      9. `sendTestEmail`: Diagnostics email detailing host, port, authenticated account, and timestamp.
+  - **Backend Lifecycle Integration (Zero Flow Changes)**:
+    - `src/app/api/auth/register/route.ts`: Dispatches `sendWelcomeEmail` upon successful user signup.
+    - `src/app/api/events/register/route.ts`: Dispatches `sendRegistrationConfirmationEmail` with instant ticket for free events and Paytm instructions for paid events.
+    - `src/app/api/payments/submit/route.ts`: Dispatches `sendPaymentSubmittedEmail` acknowledging payment receipt upload.
+    - `src/app/api/admin/payments/route.ts`: Dispatches `sendPaymentApprovalEmail` upon approval, `sendPaymentResubmitEmail` upon resubmit request, and `sendPaymentRejectionEmail` upon rejection.
+    - `src/app/api/auth/forgot-password/route.ts` & `src/app/forgot-password/page.tsx`: Full end-to-end password reset email dispatch.
+    - `src/app/api/contact/route.ts` & `src/app/contact/page.tsx`: Full end-to-end helpdesk message transmission.
+  - **Admin Settings Diagnostic Panel (`src/app/admin/settings/page.tsx` & `/api/admin/email`)**:
+    - Added an interactive "Gmail SMTP Diagnostics & Testing" card directly within `/admin/settings`.
+    - Displays engine status ("Live Gmail SMTP Active" vs "Graceful Simulation Mode"), sender address, and authenticated user.
+    - 1-Click "Verify Connection" button testing live SMTP socket handshakes.
+    - Diagnostic test email dispatcher allowing administrators to send a test message to any email and observe real-time message ID or error feedback.
+    - Live audit log viewer showing recent dispatches with status badges (`sent`, `simulated`, `failed`).
+  - **Documentation & Setup Instructions (`.env.example`)**:
+    - Updated `.env.example` with clear step-by-step guidance on creating Google App Passwords, port configuration, and branding variables.
+- **Verification & Testing Results**:
+  - `npx tsc --noEmit`: 0 TypeScript errors.
+  - `npm test` (`npx vitest run`): 53/53 tests passing across 9 test suites (100% pass rate), including 16 new tests in `src/__tests__/gmail-sending-functionality.test.ts`.
+  - `npm run build`: All 55 static and dynamic Next.js routes compiled with exit code 0.
+
 
 
 

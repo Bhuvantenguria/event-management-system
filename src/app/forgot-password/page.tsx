@@ -8,10 +8,32 @@ import { Mail, ArrowRight, ArrowLeft, CheckCircle2 } from "lucide-react";
 export default function ForgotPasswordPage() {
   const [email, setEmail] = useState("");
   const [submitted, setSubmitted] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState("");
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setSubmitted(true);
+    setError("");
+    setIsLoading(true);
+
+    try {
+      const res = await fetch("/api/auth/forgot-password", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: email.trim() }),
+      });
+
+      const data = await res.json();
+      if (!res.ok) {
+        setError(data.error || "Failed to process password reset request.");
+      } else {
+        setSubmitted(true);
+      }
+    } catch (err: any) {
+      setError(err?.message || "An error occurred. Please try again.");
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -71,11 +93,18 @@ export default function ForgotPasswordPage() {
                 </div>
               </div>
 
+              {error && (
+                <div className="p-3 rounded-lg bg-destructive/10 border border-destructive/30 text-destructive text-xs">
+                  {error}
+                </div>
+              )}
+
               <button
                 type="submit"
-                className="w-full py-3 rounded-md bg-heritage-maroon hover:bg-heritage-maroon-dark text-heritage-ivory text-xs font-bold border border-heritage-gold shadow-md transition-colors flex items-center justify-center space-x-2"
+                disabled={isLoading}
+                className="w-full py-3 rounded-md bg-heritage-maroon hover:bg-heritage-maroon-dark text-heritage-ivory text-xs font-bold border border-heritage-gold shadow-md transition-colors flex items-center justify-center space-x-2 disabled:opacity-60"
               >
-                <span>Send Reset Link</span>
+                <span>{isLoading ? "Dispatching via SMTP..." : "Send Reset Link"}</span>
                 <ArrowRight className="w-4 h-4 text-heritage-gold" />
               </button>
 

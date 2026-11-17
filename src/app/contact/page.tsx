@@ -6,6 +6,8 @@ import { HeritageDivider } from "@/components/ui/heritage-decorations";
 
 export default function ContactPage() {
   const [submitted, setSubmitted] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState("");
   const [formData, setFormData] = useState({
     name: "",
     email: "",
@@ -14,9 +16,29 @@ export default function ContactPage() {
     message: "",
   });
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setSubmitted(true);
+    setError("");
+    setIsLoading(true);
+
+    try {
+      const res = await fetch("/api/contact", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(formData),
+      });
+
+      const data = await res.json();
+      if (!res.ok) {
+        setError(data.error || "Failed to submit helpdesk message.");
+      } else {
+        setSubmitted(true);
+      }
+    } catch (err: any) {
+      setError(err?.message || "An error occurred while transmitting message.");
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -185,12 +207,19 @@ export default function ContactPage() {
                 />
               </div>
 
+              {error && (
+                <div className="p-3 rounded-lg bg-destructive/10 border border-destructive/30 text-destructive text-xs">
+                  {error}
+                </div>
+              )}
+
               <button
                 type="submit"
-                className="w-full py-3 rounded-md bg-heritage-maroon hover:bg-heritage-maroon-dark text-heritage-ivory text-xs font-bold border border-heritage-gold/40 shadow-sm transition-colors flex items-center justify-center space-x-2"
+                disabled={isLoading}
+                className="w-full py-3 rounded-md bg-heritage-maroon hover:bg-heritage-maroon-dark text-heritage-ivory text-xs font-bold border border-heritage-gold/40 shadow-sm transition-colors flex items-center justify-center space-x-2 disabled:opacity-60"
               >
                 <Send className="w-3.5 h-3.5 text-heritage-gold" />
-                <span>Submit Message</span>
+                <span>{isLoading ? "Transmitting via SMTP..." : "Submit Message"}</span>
               </button>
             </form>
           )}
