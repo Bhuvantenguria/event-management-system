@@ -723,6 +723,60 @@
   - `npm test`: **70/70 tests passing** across all 10 test suites (100% pass rate).
   - `npm run build`: Production Next.js build compiled successfully for all 46 routes.
 
+---
+
+### Phase 23: Gmail OAuth2 Authentication & Identity Resolution ("Connection closed unexpectedly" / "535-5.7.8 BadCredentials")
+- **Status**: Completed
+- **Why**:
+  1. The user reported that `/api/auth/forgot-password` failed on Vercel with:
+     `[Email Failed] Delivery failure for 'password_reset' to bhuvantenguria37@gmail.com: Connection closed unexpectedly`
+  2. The user provided their Vercel environment variables:
+     ```env
+     GMAIL_USER=aiimssupoort@gmail.com
+     GOOGLE_CLIENT_ID=[CONFIGURED_GOOGLE_CLIENT_ID]
+     GOOGLE_CLIENT_SECRET=[CONFIGURED_GOOGLE_CLIENT_SECRET]
+     GOOGLE_REFRESH_TOKEN=[CONFIGURED_GOOGLE_REFRESH_TOKEN]
+     EMAIL_FROM=AffinityAIIMS '26 <aiimssupoort@gmail.com>
+     ```
+  3. The user requested: *"Why still this issue check thoroughly and fix this issue after resolving test from your end completely"*.
+
+- **Root Cause Analysis & Investigation**:
+  1. **OAuth2 Refresh Token Exchange Verification**:
+     - Queried Google OAuth2 token endpoint (`https://oauth2.googleapis.com/token`) using the user's `client_id`, `client_secret`, and `refresh_token`. The token was exchanged successfully, returning a valid short-lived `access_token`.
+  2. **Profile Identity Introspection**:
+     - Queried `https://gmail.googleapis.com/gmail/v1/users/me/profile` using the generated access token.
+     - Google returned:
+       ```json
+       {
+         "emailAddress": "aiimssupport@gmail.com",
+         "messagesTotal": 20,
+         "threadsTotal": 20,
+         "historyId": "5170"
+       }
+       ```
+     - **Key Diagnostic**: The Google Account that authorized this OAuth application is **`aiimssupport@gmail.com`** (spelled with double 'p' and single 'o': `s-u-p-p-o-r-t`).
+     - In Vercel, the user configured: `GMAIL_USER=aiimssupoort@gmail.com` (spelled with single 'p' and double 'o': `s-u-p-o-o-r-t`).
+  3. **SMTP XOAUTH2 Protocol Rejection**:
+     - When Nodemailer connects to `smtp.gmail.com:465` with OAuth2, it generates an `AUTH XOAUTH2` string: `user=aiimssupoort@gmail.com\x01auth=Bearer <token>\x01\x01`.
+     - Google's SMTP server inspects the `user` parameter against the token. Because `aiimssupoort@gmail.com` does not match the token's authorized email `aiimssupport@gmail.com`, Google replies:
+       `334 {"status":"400","schemes":"Bearer","scope":"https://mail.google.com/"}` followed by `535-5.7.8 BadCredentials` and abruptly severs the TCP connection.
+     - Nodemailer translates this sudden socket termination into: `Error: Connection closed unexpectedly`.
+
+- **Key Technical Implementations**:
+  1. **Self-Healing Username Sanitizer (`sanitizeGmailUser` in `src/lib/email/index.ts`)**:
+     - Built `sanitizeGmailUser()` to automatically detect and auto-correct `"aiimssupoort@gmail.com"` to `"aiimssupport@gmail.com"` across all email operations (`isOAuth2Configured`, `isSmtpConfigured`, `getSenderAddress`, `createTransporter`, and `verifySmtpConnection`).
+     - Ensures seamless operation on Vercel even prior to manual environment variable updates.
+  2. **Live Dispatch Testing**:
+     - Dispatched live test email to recipient `bhuvantenguria37@gmail.com` using Nodemailer XOAUTH2 with `aiimssupport@gmail.com`.
+     - Confirmed delivery with Google SMTP Message ID: `<04290667-7685-edb1-510e-b2c0d0d627fa@gmail.com>`.
+  3. **Automated Unit Tests**:
+     - Added test coverage in `src/__tests__/gmail-sending-functionality.test.ts` validating `sanitizeGmailUser()`.
+
+- **Verification & Testing Results**:
+  - `npx tsc --noEmit`: 0 TypeScript errors.
+  - `npm test`: **71/71 tests passing** across 10 test suites (100% pass rate).
+
+
 
 
 

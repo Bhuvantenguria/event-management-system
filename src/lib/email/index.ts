@@ -68,13 +68,26 @@ export function cleanOAuthToken(val?: string): string {
 }
 
 /**
+ * Sanitizes and auto-corrects Gmail account usernames to prevent authentication failure.
+ */
+export function sanitizeGmailUser(rawUser?: string): string {
+  if (!rawUser) return "";
+  let user = cleanEnv(rawUser).toLowerCase();
+  // Self-heal common typo: "aiimssupoort@gmail.com" -> "aiimssupport@gmail.com"
+  if (user === "aiimssupoort@gmail.com") {
+    user = "aiimssupport@gmail.com";
+  }
+  return user;
+}
+
+/**
  * Checks whether Google OAuth2 credentials have been provided in the environment.
  */
 export function isOAuth2Configured(): boolean {
   const clientId = cleanEnv(process.env.GOOGLE_CLIENT_ID);
   const clientSecret = cleanEnv(process.env.GOOGLE_CLIENT_SECRET);
   const refreshToken = cleanOAuthToken(process.env.GOOGLE_REFRESH_TOKEN);
-  const user = cleanEnv(process.env.GMAIL_USER) || cleanEnv(process.env.SMTP_USER);
+  const user = sanitizeGmailUser(process.env.GMAIL_USER || process.env.SMTP_USER);
 
   if (!clientId || !clientSecret || !refreshToken || !user) return false;
   if (
@@ -95,7 +108,7 @@ export function isOAuth2Configured(): boolean {
 export function isSmtpConfigured(): boolean {
   if (isOAuth2Configured()) return true;
 
-  const user = cleanEnv(process.env.SMTP_USER);
+  const user = sanitizeGmailUser(process.env.SMTP_USER);
   const pass = cleanEnv(process.env.SMTP_PASS);
 
   if (!user || !pass) return false;
@@ -116,7 +129,7 @@ export function isSmtpConfigured(): boolean {
  */
 export function getSenderAddress(): string {
   const appName = cleanEnv(process.env.NEXT_PUBLIC_APP_NAME) || "AffinityAIIMS '26";
-  const user = cleanEnv(process.env.GMAIL_USER) || cleanEnv(process.env.SMTP_USER);
+  const user = sanitizeGmailUser(process.env.GMAIL_USER || process.env.SMTP_USER);
 
   if (process.env.EMAIL_FROM && process.env.EMAIL_FROM.trim()) {
     const fromVal = process.env.EMAIL_FROM.trim();
@@ -153,7 +166,7 @@ export function createTransporter() {
 
   // 1. Google OAuth2 Transport
   if (isOAuth2Configured()) {
-    const user = cleanEnv(process.env.GMAIL_USER) || cleanEnv(process.env.SMTP_USER);
+    const user = sanitizeGmailUser(process.env.GMAIL_USER || process.env.SMTP_USER);
     const clientId = cleanEnv(process.env.GOOGLE_CLIENT_ID);
     const clientSecret = cleanEnv(process.env.GOOGLE_CLIENT_SECRET);
     const refreshToken = cleanOAuthToken(process.env.GOOGLE_REFRESH_TOKEN);
@@ -182,7 +195,7 @@ export function createTransporter() {
   }
 
   // 2. Google App Password / SMTP Transport
-  const user = cleanEnv(process.env.SMTP_USER);
+  const user = sanitizeGmailUser(process.env.SMTP_USER);
   // Strip all whitespace from the Google App Password
   const pass = cleanEnv(process.env.SMTP_PASS).replace(/\s+/g, "");
 
@@ -250,7 +263,7 @@ export async function verifySmtpConnection(): Promise<{
     };
   }
 
-  const user = cleanEnv(process.env.GMAIL_USER) || cleanEnv(process.env.SMTP_USER);
+  const user = sanitizeGmailUser(process.env.GMAIL_USER || process.env.SMTP_USER);
   const host = isOAuth ? "Gmail OAuth2 (google.com)" : cleanEnv(process.env.SMTP_HOST) || "smtp.gmail.com";
   const port = isOAuth ? 465 : parseInt(cleanEnv(process.env.SMTP_PORT) || "465", 10);
 
