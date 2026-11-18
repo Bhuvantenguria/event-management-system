@@ -17,7 +17,7 @@
   - Nodemailer Gmail SMTP notifications with UP Heritage email templates.
   - Vitest test suite with 100% test pass rate.
 
----
+--- 
 
 ## Architecture Decisions & Approach Justification Log
 
