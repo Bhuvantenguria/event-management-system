@@ -95,6 +95,10 @@ export async function ensureMongoIndexes(): Promise<void> {
       db.collection("events").createIndex({ slug: 1 }, { unique: true, sparse: true }),
       db.collection("gallery").createIndex({ id: 1 }, { unique: true }),
       db.collection("qr_settings").createIndex({ id: 1 }, { unique: true }),
+      db.collection("clubs").createIndex({ id: 1 }, { unique: true }),
+      db.collection("clubs").createIndex({ slug: 1 }, { unique: true, sparse: true }),
+      db.collection("fests").createIndex({ id: 1 }, { unique: true }),
+      db.collection("fests").createIndex({ isPrimary: 1 }),
     ]);
     global._mongoIndexesInitialized = true;
   } catch (err) {
@@ -136,6 +140,16 @@ export async function getGalleryCollection(): Promise<Collection | null> {
 export async function getQrSettingsCollection(): Promise<Collection | null> {
   const db = await getDatabase();
   return db ? db.collection("qr_settings") : null;
+}
+
+export async function getClubsCollection(): Promise<Collection | null> {
+  const db = await getDatabase();
+  return db ? db.collection("clubs") : null;
+}
+
+export async function getFestsCollection(): Promise<Collection | null> {
+  const db = await getDatabase();
+  return db ? db.collection("fests") : null;
 }
 
 export default clientPromise;

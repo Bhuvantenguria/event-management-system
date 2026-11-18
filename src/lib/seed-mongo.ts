@@ -9,9 +9,12 @@ import {
   getEventsCollection,
   getGalleryCollection,
   getQrSettingsCollection,
+  getClubsCollection,
+  getFestsCollection,
   ensureMongoIndexes,
 } from "./mongodb";
 import { dataStore } from "./data-store";
+import { purgeDummyDataFromMongo } from "./db-sync";
 
 async function main() {
   console.log("🚀 Starting MongoDB Atlas Seed for Rangmanch '26...");
@@ -39,6 +42,11 @@ async function main() {
   console.log("⚙️  Ensuring collection indexes...");
   await ensureMongoIndexes();
   console.log("✅ Indexes verified.");
+
+  // 1.1 Purge any legacy dummy/demo data from Atlas
+  console.log("🧹 Purging any legacy dummy data (registrations, payments, tickets, dummy students)...");
+  const purgeRes = await purgeDummyDataFromMongo();
+  console.log(`✅ Database cleaned: ${purgeRes.deletedRegistrations} registrations, ${purgeRes.deletedPayments} payments, ${purgeRes.deletedTickets} tickets purged.`);
 
   // 2. Seed Users
   const usersCol = await getUsersCollection();
@@ -103,6 +111,38 @@ async function main() {
       console.log("✅ Paytm UPI QR settings initialized.");
     } else {
       console.log("ℹ️ Paytm UPI QR settings already configured. Skipping QR seeding.");
+    }
+  }
+
+  // 6. Seed Cultural Clubs
+  const clubsCol = await getClubsCollection();
+  if (clubsCol) {
+    const existingClubsCount = await clubsCol.countDocuments();
+    if (existingClubsCount === 0) {
+      console.log("🌱 Seeding collegiate cultural clubs...");
+      const defaultClubs = dataStore.getAllClubs();
+      for (const club of defaultClubs) {
+        await clubsCol.updateOne({ id: club.id }, { $set: club }, { upsert: true });
+      }
+      console.log(`✅ Seeded ${defaultClubs.length} collegiate cultural clubs.`);
+    } else {
+      console.log(`ℹ️ Clubs collection already has ${existingClubsCount} records. Skipping clubs seeding.`);
+    }
+  }
+
+  // 7. Seed Scheduled Fests & Primary Timeclock Anchor
+  const festsCol = await getFestsCollection();
+  if (festsCol) {
+    const existingFestsCount = await festsCol.countDocuments();
+    if (existingFestsCount === 0) {
+      console.log("🌱 Seeding initial primary scheduled festival edition...");
+      const defaultFests = dataStore.getAllFests();
+      for (const fest of defaultFests) {
+        await festsCol.updateOne({ id: fest.id }, { $set: fest }, { upsert: true });
+      }
+      console.log(`✅ Seeded ${defaultFests.length} scheduled festival editions.`);
+    } else {
+      console.log(`ℹ️ Fests collection already has ${existingFestsCount} records. Skipping fests seeding.`);
     }
   }
 

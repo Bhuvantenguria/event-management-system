@@ -6,6 +6,8 @@ import {
   StoredTicket,
   StoredEvent,
   StoredGalleryItem,
+  StoredClub,
+  StoredFest,
 } from "./data-store";
 import {
   getDatabase,
@@ -16,6 +18,8 @@ import {
   getEventsCollection,
   getGalleryCollection,
   getQrSettingsCollection,
+  getClubsCollection,
+  getFestsCollection,
   ensureMongoIndexes,
 } from "./mongodb";
 
@@ -39,6 +43,72 @@ dataStore.setPersistenceHandler(async (collection, filter, data, action = "upser
 });
 
 /**
+ * Purge all legacy dummy/demo records (mock registrations, mock payments, mock tickets, mock test student)
+ * from both the in-memory dataStore and MongoDB Atlas, keeping only essential admin data, clubs, and fests.
+ */
+export async function purgeDummyDataFromMongo(): Promise<{
+  deletedUsers: number;
+  deletedRegistrations: number;
+  deletedPayments: number;
+  deletedTickets: number;
+}> {
+  // 1. Clean in-memory dataStore
+  const localClean = dataStore.cleanDummyData();
+
+  let deletedUsers = localClean.purgedUsers;
+  let deletedRegistrations = localClean.purgedRegistrations;
+  let deletedPayments = localClean.purgedPayments;
+  let deletedTickets = localClean.purgedTickets;
+
+  if (!process.env.MONGODB_URI) {
+    return { deletedUsers, deletedRegistrations, deletedPayments, deletedTickets };
+  }
+
+  try {
+    const db = await getDatabase();
+    if (db) {
+      // Delete dummy students
+      const uRes = await db.collection("users").deleteMany({
+        $or: [{ id: "usr-student-1" }, { email: "student@example.com" }],
+      });
+      deletedUsers = Math.max(deletedUsers, uRes.deletedCount);
+
+      // Delete dummy registrations
+      const rRes = await db.collection("registrations").deleteMany({
+        $or: [{ id: { $regex: /^reg-demo/ } }, { userId: "usr-student-1" }, { userEmail: "student@example.com" }],
+      });
+      deletedRegistrations = Math.max(deletedRegistrations, rRes.deletedCount);
+
+      // Delete dummy payments
+      const pRes = await db.collection("payments").deleteMany({
+        $or: [
+          { id: { $regex: /^pay-100/ } },
+          { registrationId: { $regex: /^reg-demo/ } },
+          { utrNumber: "407512889912" },
+          { utrNumber: "407519992341" },
+        ],
+      });
+      deletedPayments = Math.max(deletedPayments, pRes.deletedCount);
+
+      // Delete dummy tickets
+      const tRes = await db.collection("tickets").deleteMany({
+        $or: [
+          { id: { $regex: /^tkt-100/ } },
+          { registrationId: { $regex: /^reg-demo/ } },
+          { participantEmail: "student@example.com" },
+          { qrToken: "RNG-TKT-778899-KATHAK" },
+        ],
+      });
+      deletedTickets = Math.max(deletedTickets, tRes.deletedCount);
+    }
+  } catch (err) {
+    console.warn("Notice: Error while purging legacy dummy data from MongoDB Atlas:", err);
+  }
+
+  return { deletedUsers, deletedRegistrations, deletedPayments, deletedTickets };
+}
+
+/**
  * Synchronize in-memory data store with live MongoDB Atlas database.
  * Seeds initial documents if collections are empty.
  */
@@ -57,6 +127,9 @@ export async function syncWithMongo(force = false): Promise<void> {
     // Ensure production indexes exist
     await ensureMongoIndexes();
 
+    // 0. Automatically purge any legacy dummy/demo records from Atlas on first sync
+    await purgeDummyDataFromMongo();
+
     // 1. Sync Users
     const usersCol = await getUsersCollection();
     if (usersCol) {
@@ -64,7 +137,7 @@ export async function syncWithMongo(force = false): Promise<void> {
       if (dbUsers.length > 0) {
         dataStore.loadUsersFromMongo(dbUsers);
       } else {
-        // Seed default users to Atlas
+        // Seed default essential users to Atlas
         for (const u of dataStore.getAllUsers()) {
           await usersCol.updateOne({ id: u.id }, { $set: u }, { upsert: true });
         }
@@ -87,10 +160,6 @@ export async function syncWithMongo(force = false): Promise<void> {
       const dbRegs = (await regCol.find({}, { projection: { _id: 0 } }).toArray()) as unknown as StoredRegistration[];
       if (dbRegs.length > 0) {
         dataStore.loadRegistrationsFromMongo(dbRegs);
-      } else {
-        for (const r of dataStore.getAllRegistrations()) {
-          await regCol.updateOne({ id: r.id }, { $set: r }, { upsert: true });
-        }
       }
     }
 
@@ -100,10 +169,6 @@ export async function syncWithMongo(force = false): Promise<void> {
       const dbPayments = (await payCol.find({}, { projection: { _id: 0 } }).toArray()) as unknown as StoredPaymentSubmission[];
       if (dbPayments.length > 0) {
         dataStore.loadPaymentsFromMongo(dbPayments);
-      } else {
-        for (const p of dataStore.getAllPayments()) {
-          await payCol.updateOne({ id: p.id }, { $set: p }, { upsert: true });
-        }
       }
     }
 
@@ -113,10 +178,6 @@ export async function syncWithMongo(force = false): Promise<void> {
       const dbTickets = (await ticketCol.find({}, { projection: { _id: 0 } }).toArray()) as unknown as StoredTicket[];
       if (dbTickets.length > 0) {
         dataStore.loadTicketsFromMongo(dbTickets);
-      } else {
-        for (const t of dataStore.getAllTickets()) {
-          await ticketCol.updateOne({ id: t.id }, { $set: t }, { upsert: true });
-        }
       }
     }
 
@@ -158,6 +219,32 @@ export async function syncWithMongo(force = false): Promise<void> {
       } else {
         for (const g of dataStore.getAllGalleryItems()) {
           await galleryCol.updateOne({ id: g.id }, { $set: g }, { upsert: true });
+        }
+      }
+    }
+
+    // 8. Sync Cultural Clubs
+    const clubsCol = await getClubsCollection();
+    if (clubsCol) {
+      const dbClubs = (await clubsCol.find({}, { projection: { _id: 0 } }).toArray()) as unknown as StoredClub[];
+      if (dbClubs.length > 0) {
+        dataStore.loadClubsFromMongo(dbClubs);
+      } else {
+        for (const club of dataStore.getAllClubs()) {
+          await clubsCol.updateOne({ id: club.id }, { $set: club }, { upsert: true });
+        }
+      }
+    }
+
+    // 9. Sync Scheduled Fests
+    const festsCol = await getFestsCollection();
+    if (festsCol) {
+      const dbFests = (await festsCol.find({}, { projection: { _id: 0 } }).toArray()) as unknown as StoredFest[];
+      if (dbFests.length > 0) {
+        dataStore.loadFestsFromMongo(dbFests);
+      } else {
+        for (const fest of dataStore.getAllFests()) {
+          await festsCol.updateOne({ id: fest.id }, { $set: fest }, { upsert: true });
         }
       }
     }

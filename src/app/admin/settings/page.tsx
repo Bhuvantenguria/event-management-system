@@ -19,6 +19,8 @@ import {
   RefreshCw,
   Activity,
   Server,
+  Database,
+  Trash2,
 } from "lucide-react";
 
 export default function AdminSettingsPage() {
@@ -48,6 +50,14 @@ export default function AdminSettingsPage() {
   const [testEmailResult, setTestEmailResult] = useState<{
     success: boolean;
     message: string;
+  } | null>(null);
+
+  // Database Maintenance State
+  const [isPurgingDb, setIsPurgingDb] = useState(false);
+  const [dbPurgeResult, setDbPurgeResult] = useState<{
+    success: boolean;
+    message: string;
+    details?: any;
   } | null>(null);
 
   const loadSmtpStatus = async () => {
@@ -143,6 +153,41 @@ export default function AdminSettingsPage() {
       });
     } finally {
       setIsSendingTestEmail(false);
+    }
+  };
+
+  const handlePurgeDummyData = async () => {
+    if (!confirm("Are you sure you want to purge all legacy dummy data? Only essential admin credentials and active clubs/fests will be preserved.")) {
+      return;
+    }
+
+    setIsPurgingDb(true);
+    setDbPurgeResult(null);
+
+    try {
+      const res = await fetch("/api/admin/clean-dummy-data", {
+        method: "POST",
+      });
+      const data = await res.json();
+      if (res.ok && data.success) {
+        setDbPurgeResult({
+          success: true,
+          message: data.message || "Database successfully cleaned! All dummy records removed.",
+          details: data,
+        });
+      } else {
+        setDbPurgeResult({
+          success: false,
+          message: data.error || "Failed to purge dummy data.",
+        });
+      }
+    } catch (err: any) {
+      setDbPurgeResult({
+        success: false,
+        message: err?.message || "Network error while cleaning database.",
+      });
+    } finally {
+      setIsPurgingDb(false);
     }
   };
 
@@ -632,6 +677,74 @@ export default function AdminSettingsPage() {
             </div>
           </div>
         )}
+      </div>
+
+      {/* 3. Database Maintenance & Clean State Card */}
+      <div className="rounded-2xl bg-card border border-border shadow-sm p-6 space-y-5">
+        <div className="flex items-center space-x-3 pb-4 border-b border-border">
+          <div className="w-10 h-10 rounded-xl bg-destructive/10 border border-destructive/20 flex items-center justify-center text-destructive">
+            <Database className="w-5 h-5" />
+          </div>
+          <div>
+            <h2 className="font-serif text-lg sm:text-xl font-bold text-foreground">
+              Database Maintenance & Dummy Data Cleanup
+            </h2>
+            <p className="text-xs text-muted-foreground font-sans">
+              Keep your production database pristine. Purge all legacy demo registrations, mock payments, and placeholder students while preserving administrator accounts.
+            </p>
+          </div>
+        </div>
+
+        {dbPurgeResult && (
+          <div
+            className={`p-4 rounded-xl text-xs flex items-start space-x-2.5 ${
+              dbPurgeResult.success
+                ? "bg-emerald-500/10 border border-emerald-500/30 text-emerald-400"
+                : "bg-destructive/10 border border-destructive/30 text-destructive"
+            }`}
+          >
+            {dbPurgeResult.success ? (
+              <CheckCircle2 className="w-4 h-4 shrink-0 mt-0.5" />
+            ) : (
+              <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
+            )}
+            <div className="space-y-1">
+              <span className="font-bold block">{dbPurgeResult.message}</span>
+              {dbPurgeResult.details && (
+                <div className="text-[11px] opacity-90 font-mono">
+                  Purged: {dbPurgeResult.details.deletedRegistrations || 0} registrations,{" "}
+                  {dbPurgeResult.details.deletedPayments || 0} payments,{" "}
+                  {dbPurgeResult.details.deletedTickets || 0} tickets,{" "}
+                  {dbPurgeResult.details.deletedUsers || 0} demo students. Remaining essential admins:{" "}
+                  {dbPurgeResult.details.remainingUsers || 0}.
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
+        <div className="p-4 rounded-xl bg-secondary/30 border border-border flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div className="space-y-1">
+            <h3 className="font-bold text-foreground text-xs">Purge Legacy Dummy Records</h3>
+            <p className="text-[11px] text-muted-foreground">
+              Removes mock registrations (e.g. REG-2026-1001), sample UTR payments, demo tickets, and test student accounts from both in-memory cache and MongoDB Atlas.
+            </p>
+          </div>
+
+          <button
+            type="button"
+            onClick={handlePurgeDummyData}
+            disabled={isPurgingDb}
+            className="inline-flex items-center justify-center space-x-2 px-4 py-2.5 rounded-xl bg-destructive text-destructive-foreground text-xs font-bold shadow-md hover:brightness-110 transition-all cursor-pointer disabled:opacity-50 shrink-0"
+          >
+            {isPurgingDb ? (
+              <Loader2 className="w-4 h-4 animate-spin" />
+            ) : (
+              <Trash2 className="w-4 h-4" />
+            )}
+            <span>{isPurgingDb ? "Purging Records..." : "Purge All Dummy Data"}</span>
+          </button>
+        </div>
       </div>
     </div>
   );

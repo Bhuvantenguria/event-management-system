@@ -107,8 +107,49 @@ export interface StoredGalleryItem {
   createdAt: string;
 }
 
+export interface StoredClub {
+  id: string;
+  name: string;
+  slug: string;
+  category: string;
+  description?: string;
+  motto?: string;
+  badge?: string;
+  coordinator?: string;
+  coordinatorEmail?: string;
+  coordinatorPhone?: string;
+  logoUrl?: string;
+  bannerUrl?: string;
+  color?: string; // Tailwind gradient CSS e.g. "from-fest-sunset to-fest-burgundy"
+  eventsHosted?: string[];
+  eventCount?: string;
+  prizes?: string;
+  href?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface StoredFest {
+  id: string;
+  name: string;
+  edition?: string;
+  tagline?: string;
+  theme?: string;
+  startDate: string; // ISO datetime string e.g. "2026-03-12T09:00:00"
+  endDate: string; // ISO datetime string e.g. "2026-03-15T22:00:00"
+  dateBadge?: string; // e.g. "12–15 March 2026"
+  venue: string; // e.g. "AIIMS Raebareli Main Campus"
+  description?: string;
+  isPrimary: boolean; // Flag driving homepage timer and hero banner
+  status: "upcoming" | "ongoing" | "completed" | "archived";
+  primaryEventId?: string; // Optional: Link to an event if countdown targets a specific event
+  bannerUrl?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
 export type PersistenceHandler = (
-  collection: "users" | "registrations" | "payments" | "tickets" | "qr_settings" | "events" | "gallery",
+  collection: "users" | "registrations" | "payments" | "tickets" | "qr_settings" | "events" | "gallery" | "clubs" | "fests",
   filter: Record<string, any>,
   data: Record<string, any>,
   action?: "upsert" | "delete"
@@ -122,6 +163,8 @@ class DataStore {
   private tickets: StoredTicket[] = [];
   private events: StoredEvent[] = [];
   private gallery: StoredGalleryItem[] = [];
+  private clubs: StoredClub[] = [];
+  private fests: StoredFest[] = [];
   private qrSettings = {
     upiId: "swar.aiims@paytm",
     upiName: "SWAR AIIMS Raebareli",
@@ -150,7 +193,7 @@ class DataStore {
   }
 
   private persist(
-    collection: "users" | "registrations" | "payments" | "tickets" | "qr_settings" | "events" | "gallery",
+    collection: "users" | "registrations" | "payments" | "tickets" | "qr_settings" | "events" | "gallery" | "clubs" | "fests",
     filter: Record<string, any>,
     data: Record<string, any>,
     action: "upsert" | "delete" = "upsert"
@@ -165,8 +208,8 @@ class DataStore {
 
   private seedInitialData() {
     const hashedAdmin = bcrypt.hashSync("Admin@1234", 10);
-    const hashedStudent = bcrypt.hashSync("Student@1234", 10);
 
+    // Essential Admin Accounts only (No dummy test participants or mock records)
     this.users = [
       {
         id: "usr-admin-1",
@@ -201,110 +244,169 @@ class DataStore {
         emailVerified: true,
         createdAt: new Date().toISOString(),
       },
+    ];
+
+    // Clean Production State: No dummy registrations, payments, or tickets
+    this.registrations = [];
+    this.payments = [];
+    this.tickets = [];
+
+    // Official Collegiate Cultural Clubs
+    this.clubs = [
       {
-        id: "usr-student-1",
-        email: "student@example.com",
-        name: "Aditi Sharma",
-        passwordHash: hashedStudent,
-        role: "student",
-        phone: "+91 94512 34567",
-        college: "AIIMS Raebareli",
-        studentId: "AIIMS-2024-8891",
-        emailVerified: true,
+        id: "club-mudra",
+        name: "Mudra Dance Society",
+        slug: "mudra-dance-society",
+        category: "Dance & Performing Arts",
+        motto: "Rhythms of Kathak & Classical Grace",
+        badge: "Est. 2012 • 45 Active Dancers",
+        coordinator: "Ananya Mishra",
+        coordinatorEmail: "dance@aiimsraebareli.edu.in",
+        coordinatorPhone: "+91 98765 43210",
+        color: "from-fest-sunset to-fest-burgundy",
+        eventsHosted: ["Kathak Jugalbandi", "Braj Mayur Nritya", "Western Choreo Night"],
+        eventCount: "6 Contests",
+        prizes: "₹1,25,000",
+        href: "/events?category=cultural",
+        description: "Official collegiate dance society curating classical Gharana repertoires, contemporary choreography, and folk traditions.",
         createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      },
+      {
+        id: "club-dhwani",
+        name: "Dhwani Music & Band Society",
+        slug: "dhwani-music-society",
+        category: "Music & Band Battles",
+        motto: "Hindustani Vocals to Electric Sufi Riffs",
+        badge: "Campus Band & Choir",
+        coordinator: "Kabir Sengupta",
+        coordinatorEmail: "music@aiimsraebareli.edu.in",
+        coordinatorPhone: "+91 98765 43211",
+        color: "from-fest-burgundy to-fest-plum",
+        eventsHosted: ["Roohaniyat Sufi Rock", "Kashi Raga Solo", "Unplugged Acoustic"],
+        eventCount: "8 Contests",
+        prizes: "₹95,000",
+        href: "/events?category=music",
+        description: "Campus vocal and instrumental society organizing pan-India collegiate battle of the bands and classical concerts.",
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      },
+      {
+        id: "club-natraj",
+        name: "Natraj Dramatics Club",
+        slug: "natraj-dramatics-club",
+        category: "Theatre & Dramatics",
+        motto: "Street Nukkad Natak to Awadhi Court Plays",
+        badge: "State Award Winning Troupe",
+        coordinator: "Devendra Rathore",
+        coordinatorEmail: "theatre@aiimsraebareli.edu.in",
+        coordinatorPhone: "+91 98765 43212",
+        color: "from-fest-plum to-fest-charcoal",
+        eventsHosted: ["Nukkad Natak (Street Play)", "Stage Play Competition", "Mono-Acting"],
+        eventCount: "5 Contests",
+        prizes: "₹80,000",
+        href: "/events?category=cultural",
+        description: "The theatrical heart of campus presenting socially conscious street plays and dramatic stage productions.",
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      },
+      {
+        id: "club-kalam",
+        name: "Kalam Literary & Debating Society",
+        slug: "kalam-literary-society",
+        category: "Literary, Poetry & Debates",
+        motto: "Shaam-e-Awadh Shayari to Parliamentary Debates",
+        badge: "Official College MUN & Lit Wing",
+        coordinator: "Divya Pandey",
+        coordinatorEmail: "literary@aiimsraebareli.edu.in",
+        coordinatorPhone: "+91 98765 43213",
+        color: "from-fest-rose to-fest-burgundy",
+        eventsHosted: ["Shaam-e-Awadh Kavi Sammelan", "All-India Youth Parliament", "Turncoat Debate"],
+        eventCount: "7 Contests",
+        prizes: "₹65,000",
+        href: "/events?category=literary",
+        description: "Promoting Hindi poetry, Urdu ghazals, English forensics, and competitive parliamentary debating.",
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      },
+      {
+        id: "club-akriti",
+        name: "Akriti Fine Arts & Heritage Crafts Club",
+        slug: "akriti-fine-arts-club",
+        category: "Fine Arts & Design",
+        motto: "Preserving Banarasi Weaves & Chikankari Design",
+        badge: "Craft Guild Partners",
+        coordinator: "Aditya Sharma",
+        coordinatorEmail: "arts@aiimsraebareli.edu.in",
+        coordinatorPhone: "+91 98765 43214",
+        color: "from-fest-gold to-fest-sunset",
+        eventsHosted: ["Shilpkar 3D Design Challenge", "Live Clay Pottery", "Couture Runway"],
+        eventCount: "8 Contests",
+        prizes: "₹70,000",
+        href: "/events?category=heritage_arts",
+        description: "Dedicated to the living visual traditions, textile craftsmanship, and modern installation arts of Uttar Pradesh.",
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      },
+      {
+        id: "club-varchasva",
+        name: "Varchasva Sports Council",
+        slug: "varchasva-sports-council",
+        category: "Sports Tournaments",
+        motto: "Pride, Passion & Varsity Athletics",
+        badge: "University Athletics Wing",
+        coordinator: "Capt. Vikramaditya Singh",
+        coordinatorEmail: "sports@aiimsraebareli.edu.in",
+        coordinatorPhone: "+91 98765 43215",
+        color: "from-fest-green to-fest-charcoal",
+        eventsHosted: ["Chhatrapati Shivaji Football Cup", "Major Dhyan Chand Cricket", "Awadh Basketball"],
+        eventCount: "6 Tournaments",
+        prizes: "₹1,50,000",
+        href: "/sports",
+        description: "Official campus sports council orchestrating university football, cricket, basketball, and athletics championships.",
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      },
+      {
+        id: "club-bytecraft",
+        name: "ByteCraft Tech & Innovation Club",
+        slug: "bytecraft-tech-society",
+        category: "Tech & Hackathons",
+        motto: "Coding Solutions for India's Heritage",
+        badge: "Developer Student Society",
+        coordinator: "Neha Verma",
+        coordinatorEmail: "tech@aiimsraebareli.edu.in",
+        coordinatorPhone: "+91 98765 43216",
+        color: "from-fest-champagne to-fest-charcoal",
+        eventsHosted: ["Navotsav AI Tourism Hackathon", "Speed Circuit Design", "Algorithmic Clash"],
+        eventCount: "4 Contests",
+        prizes: "₹85,000",
+        href: "/events?category=technical",
+        description: "Empowering developers to build AI, IoT, and digital solutions honoring local culture and healthcare innovation.",
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
       },
     ];
 
-    // Seed one completed registration with approved ticket
-    const regId1 = "reg-demo-1001";
-    const token1 = "RNG-TKT-778899-KATHAK";
-
-    this.registrations.push({
-      id: regId1,
-      registrationNumber: "REG-2026-1001",
-      eventId: "kathak-jugalbandi",
-      eventTitle: "Kathak Jugalbandi – Classical Dance Confluence",
-      userId: "usr-student-1",
-      userName: "Aditi Sharma",
-      userEmail: "student@example.com",
-      college: "Lucknow University",
-      participationType: "individual",
-      amount: 300,
-      paymentStatus: "approved",
-      registrationStatus: "confirmed",
-      qrToken: token1,
-      createdAt: new Date(Date.now() - 86400000 * 2).toISOString(),
-      updatedAt: new Date(Date.now() - 86400000).toISOString(),
-    });
-
-    this.payments.push({
-      id: "pay-1001",
-      registrationId: regId1,
-      amountExpected: 300,
-      amountSubmitted: 300,
-      utrNumber: "407512889912",
-      paymentScreenshotUrl: "https://images.unsplash.com/photo-1554224155-8d04cb21cd6c?q=80&w=600&auto=format&fit=crop",
-      paymentDate: "2026-03-01",
-      status: "approved",
-      reviewedBy: "usr-finance-admin-1",
-      reviewedAt: new Date(Date.now() - 86400000).toISOString(),
-      createdAt: new Date(Date.now() - 86400000 * 2).toISOString(),
-    });
-
-    this.tickets.push({
-      id: "tkt-1001",
-      registrationId: regId1,
-      ticketNumber: "TKT-UP-2026-0042",
-      qrToken: token1,
-      eventTitle: "Kathak Jugalbandi – Classical Dance Confluence",
-      eventDate: "13 March 2026, 05:00 PM",
-      eventVenue: "Nawab Wajid Ali Shah Auditorium",
-      participantName: "Aditi Sharma",
-      participantEmail: "student@example.com",
-      college: "Lucknow University",
-      isValid: true,
-      isScanned: false,
-      generatedAt: new Date(Date.now() - 86400000).toISOString(),
-    });
-
-    // Seed a pending payment registration
-    const regId2 = "reg-demo-1002";
-    this.registrations.push({
-      id: regId2,
-      registrationNumber: "REG-2026-1002",
-      eventId: "royal-up-football-cup",
-      eventTitle: "Chhatrapati Shivaji Memorial Football Cup",
-      userId: "usr-student-1",
-      userName: "Aditi Sharma",
-      userEmail: "student@example.com",
-      college: "Lucknow University",
-      participationType: "team",
-      teamName: "Awadh Strikers FC",
-      teamMembers: [
-        { name: "Aditi Sharma", email: "student@example.com", isCaptain: true },
-        { name: "Kabir Khan", email: "kabir@example.com" },
-        { name: "Aryan Yadav", email: "aryan@example.com" },
-      ],
-      amount: 1500,
-      paymentStatus: "pending_verification",
-      registrationStatus: "pending",
-      qrToken: "RNG-TKT-991122-FOOTBALL",
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-    });
-
-    this.payments.push({
-      id: "pay-1002",
-      registrationId: regId2,
-      amountExpected: 1500,
-      amountSubmitted: 1500,
-      utrNumber: "407519992341",
-      paymentScreenshotUrl: "https://images.unsplash.com/photo-1554224155-8d04cb21cd6c?q=80&w=600&auto=format&fit=crop",
-      paymentDate: "2026-03-02",
-      notes: "Paid via Paytm UPI from HDFC Bank",
-      status: "pending",
-      createdAt: new Date().toISOString(),
-    });
+    // Scheduled Festival Editions & Primary Timeclock Anchor
+    this.fests = [
+      {
+        id: "fest-affinity-2026",
+        name: "AffinityAIIMS '26",
+        edition: "Annual Inter-Collegiate Cultural Fest",
+        tagline: "Where Healthcare Leaders, Cultural Heritage & Youth Energy Converge",
+        theme: "Parampara – Heritage of Uttar Pradesh",
+        startDate: "2026-03-12T09:00:00",
+        endDate: "2026-03-15T22:00:00",
+        dateBadge: "12–15 March 2026",
+        venue: "AIIMS Raebareli Main Campus",
+        description: "Flagship 4-day inter-collegiate cultural fest celebrating classical Gharanas, collegiate rock bands, dramatics, and sports.",
+        isPrimary: true, // Primary fest driving the homepage live timeclock!
+        status: "upcoming",
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      },
+    ];
 
     // Seed Events
     this.events = [
@@ -875,6 +977,250 @@ class DataStore {
         this.gallery.push(g);
       }
     }
+  }
+
+  // ==========================================
+  // Clubs Management (Full CRUD)
+  // ==========================================
+  getAllClubs(): StoredClub[] {
+    return this.clubs;
+  }
+
+  getClubById(id: string): StoredClub | undefined {
+    return this.clubs.find((c) => c.id === id);
+  }
+
+  getClubBySlug(slug: string): StoredClub | undefined {
+    return this.clubs.find((c) => c.slug === slug || c.id === slug);
+  }
+
+  createClub(club: Omit<StoredClub, "id" | "createdAt" | "updatedAt">): StoredClub {
+    const slug = club.slug || club.name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "");
+    const id = `club-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`;
+    const newClub: StoredClub = {
+      ...club,
+      id,
+      slug,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    };
+    this.clubs.push(newClub);
+    this.persist("clubs", { id: newClub.id }, newClub, "upsert");
+    return newClub;
+  }
+
+  updateClub(id: string, updates: Partial<StoredClub>): StoredClub | undefined {
+    const club = this.getClubById(id);
+    if (!club) return undefined;
+    Object.assign(club, updates, { updatedAt: new Date().toISOString() });
+    this.persist("clubs", { id }, club, "upsert");
+    return club;
+  }
+
+  deleteClub(id: string): boolean {
+    const idx = this.clubs.findIndex((c) => c.id === id);
+    if (idx === -1) return false;
+    const removed = this.clubs.splice(idx, 1)[0];
+    this.persist("clubs", { id: removed.id }, removed, "delete");
+    return true;
+  }
+
+  loadClubsFromMongo(clubs: StoredClub[]) {
+    for (const c of clubs) {
+      const idx = this.clubs.findIndex((x) => x.id === c.id || x.slug === c.slug);
+      if (idx >= 0) {
+        this.clubs[idx] = c;
+      } else {
+        this.clubs.push(c);
+      }
+    }
+  }
+
+  // ==========================================
+  // Fest Scheduling & Homepage Timeclock Sync
+  // ==========================================
+  getAllFests(): StoredFest[] {
+    return this.fests;
+  }
+
+  getFestById(id: string): StoredFest | undefined {
+    return this.fests.find((f) => f.id === id);
+  }
+
+  getPrimaryFest(): StoredFest | undefined {
+    const primary = this.fests.find((f) => f.isPrimary);
+    if (primary) return primary;
+    if (this.fests.length > 0) return this.fests[0];
+    return undefined;
+  }
+
+  createFest(fest: Omit<StoredFest, "id" | "createdAt" | "updatedAt">): StoredFest {
+    const id = `fest-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`;
+    // If marked primary, unset primary on all other fests
+    if (fest.isPrimary) {
+      for (const f of this.fests) {
+        f.isPrimary = false;
+        this.persist("fests", { id: f.id }, f, "upsert");
+      }
+    }
+    const newFest: StoredFest = {
+      ...fest,
+      id,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    };
+    this.fests.push(newFest);
+    this.persist("fests", { id: newFest.id }, newFest, "upsert");
+    return newFest;
+  }
+
+  updateFest(id: string, updates: Partial<StoredFest>): StoredFest | undefined {
+    const fest = this.getFestById(id);
+    if (!fest) return undefined;
+    if (updates.isPrimary) {
+      for (const f of this.fests) {
+        if (f.id !== id && f.isPrimary) {
+          f.isPrimary = false;
+          this.persist("fests", { id: f.id }, f, "upsert");
+        }
+      }
+    }
+    Object.assign(fest, updates, { updatedAt: new Date().toISOString() });
+    this.persist("fests", { id }, fest, "upsert");
+    return fest;
+  }
+
+  setPrimaryFest(id: string): boolean {
+    const fest = this.getFestById(id);
+    if (!fest) return false;
+    for (const f of this.fests) {
+      f.isPrimary = f.id === id;
+      this.persist("fests", { id: f.id }, f, "upsert");
+    }
+    return true;
+  }
+
+  deleteFest(id: string): boolean {
+    const idx = this.fests.findIndex((f) => f.id === id);
+    if (idx === -1) return false;
+    const removed = this.fests.splice(idx, 1)[0];
+    this.persist("fests", { id: removed.id }, removed, "delete");
+    // If deleted fest was primary, set another fest as primary if available
+    if (removed.isPrimary && this.fests.length > 0) {
+      this.fests[0].isPrimary = true;
+      this.persist("fests", { id: this.fests[0].id }, this.fests[0], "upsert");
+    }
+    return true;
+  }
+
+  loadFestsFromMongo(fests: StoredFest[]) {
+    for (const f of fests) {
+      const idx = this.fests.findIndex((x) => x.id === f.id);
+      if (idx >= 0) {
+        this.fests[idx] = f;
+      } else {
+        this.fests.push(f);
+      }
+    }
+  }
+
+  /**
+   * Resolves the primary target countdown date and details for the homepage timeclock.
+   * Prioritizes the primary scheduled fest or primary event schedule.
+   */
+  getPrimaryCountdown(): {
+    targetDate: string;
+    festName: string;
+    edition?: string;
+    tagline?: string;
+    theme?: string;
+    dateBadge?: string;
+    venue?: string;
+    isPrimary: boolean;
+    status: string;
+    primaryEvent?: StoredEvent;
+  } {
+    const primaryFest = this.getPrimaryFest();
+
+    let primaryEvent: StoredEvent | undefined = undefined;
+    if (primaryFest?.primaryEventId) {
+      primaryEvent = this.getEventById(primaryFest.primaryEventId);
+    }
+
+    if (primaryFest) {
+      return {
+        targetDate: primaryFest.startDate,
+        festName: primaryFest.name,
+        edition: primaryFest.edition || "Annual Cultural Fest",
+        tagline: primaryFest.tagline || "Where Healthcare Leaders & Cultural Heritage Converge",
+        theme: primaryFest.theme,
+        dateBadge: primaryFest.dateBadge || "12–15 March 2026",
+        venue: primaryFest.venue || "AIIMS Raebareli Main Campus",
+        isPrimary: primaryFest.isPrimary,
+        status: primaryFest.status,
+        primaryEvent,
+      };
+    }
+
+    // Default fallback anchor
+    return {
+      targetDate: "2026-03-12T09:00:00",
+      festName: "AffinityAIIMS '26",
+      edition: "Annual Cultural Fest",
+      tagline: "Where Healthcare Leaders & Cultural Heritage Converge",
+      dateBadge: "12–15 March 2026",
+      venue: "AIIMS Raebareli Main Campus",
+      isPrimary: true,
+      status: "upcoming",
+    };
+  }
+
+  // ==========================================
+  // Database Maintenance: Purge All Dummy Data
+  // ==========================================
+  cleanDummyData(): {
+    purgedUsers: number;
+    purgedRegistrations: number;
+    purgedPayments: number;
+    purgedTickets: number;
+  } {
+    // 1. Purge dummy non-admin student users
+    const initialUsersCount = this.users.length;
+    this.users = this.users.filter(
+      (u) =>
+        u.role === "admin" ||
+        u.role === "super_admin" ||
+        (!u.id.startsWith("usr-student") && u.email !== "student@example.com")
+    );
+    const purgedUsers = initialUsersCount - this.users.length;
+
+    // 2. Purge dummy registrations
+    const initialRegsCount = this.registrations.length;
+    this.registrations = this.registrations.filter(
+      (r) => !r.id.startsWith("reg-demo") && r.userId !== "usr-student-1" && r.userEmail !== "student@example.com"
+    );
+    const purgedRegistrations = initialRegsCount - this.registrations.length;
+
+    // 3. Purge dummy payments
+    const initialPaymentsCount = this.payments.length;
+    this.payments = this.payments.filter(
+      (p) => !p.id.startsWith("pay-100") && p.registrationId !== "reg-demo-1001" && p.registrationId !== "reg-demo-1002"
+    );
+    const purgedPayments = initialPaymentsCount - this.payments.length;
+
+    // 4. Purge dummy tickets
+    const initialTicketsCount = this.tickets.length;
+    this.tickets = this.tickets.filter(
+      (t) => !t.id.startsWith("tkt-100") && t.registrationId !== "reg-demo-1001" && t.participantEmail !== "student@example.com"
+    );
+    const purgedTickets = initialTicketsCount - this.tickets.length;
+
+    return {
+      purgedUsers,
+      purgedRegistrations,
+      purgedPayments,
+      purgedTickets,
+    };
   }
 }
 

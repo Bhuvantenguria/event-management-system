@@ -1,6 +1,6 @@
 "use client";
 
-import React from "react";
+import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import {
   ArrowRight,
@@ -17,6 +17,33 @@ import {
 import { CountdownTimer } from "./countdown";
 
 export function HeroSection() {
+  const [primaryFest, setPrimaryFest] = useState({
+    targetDate: "2026-03-12T09:00:00",
+    festName: "AffinityAIIMS",
+    edition: "Annual Inter-Collegiate Cultural Fest",
+    tagline: "Where Healthcare Leaders, Cultural Heritage & Youth Energy Converge",
+    dateBadge: "12–15 March 2026",
+    venue: "AIIMS Raebareli Main Campus",
+  });
+
+  useEffect(() => {
+    fetch("/api/fests/primary")
+      .then((res) => res.json())
+      .then((data) => {
+        if (data.success && data.targetDate) {
+          setPrimaryFest({
+            targetDate: data.targetDate,
+            festName: data.festName || "AffinityAIIMS",
+            edition: data.edition || "Annual Inter-Collegiate Cultural Fest",
+            tagline: data.tagline || "Where Healthcare Leaders, Cultural Heritage & Youth Energy Converge",
+            dateBadge: data.dateBadge || "12–15 March 2026",
+            venue: data.venue || "AIIMS Raebareli Main Campus",
+          });
+        }
+      })
+      .catch(() => {});
+  }, []);
+
   const scrollToNext = () => {
     const nextSection = document.getElementById("homepage-about");
     if (nextSection) {
@@ -112,7 +139,7 @@ export function HeroSection() {
           <div className="flex items-center space-x-1.5">
             <Zap className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-fest-sunset animate-pulse shrink-0" />
             <span className="text-[10px] sm:text-xs md:text-sm font-sans tracking-wide sm:tracking-wider font-extrabold text-fest-gold-light uppercase">
-              Annual Inter-Collegiate Cultural Fest
+              {primaryFest.edition}
             </span>
           </div>
           <span className="hidden sm:inline text-fest-gold/50">•</span>
@@ -121,14 +148,14 @@ export function HeroSection() {
           </span>
           <span className="hidden sm:inline text-fest-gold/50">|</span>
           <span className="text-[10px] sm:text-xs font-sans text-white font-bold tracking-wide">
-            12–15 March 2026
+            {primaryFest.dateBadge}
           </span>
         </div>
 
         {/* Festival Grand Campaign Title with Overlapping Editorial Treatment */}
         <div className="relative mb-3 max-w-full px-1 sm:px-2">
           <span className="text-[10px] sm:text-xs md:text-sm uppercase tracking-wider sm:tracking-[0.25em] font-sans font-black text-fest-sunset block mb-2 drop-shadow-sm break-words max-w-full">
-            AIIMS Raebareli • 60+ Collegiate Delegations • 1 Grand Trophy
+            {primaryFest.venue} • 60+ Collegiate Delegations • 1 Grand Trophy
           </span>
           <h1 className="font-serif text-4xl sm:text-6xl md:text-8xl lg:text-9xl font-black text-white tracking-tight leading-none drop-shadow-2xl break-words max-w-full">
             Affinity<span className="sunset-gradient-text">AIIMS</span>
@@ -137,17 +164,17 @@ export function HeroSection() {
 
         {/* Festival Tagline */}
         <p className="font-serif text-base sm:text-xl md:text-3xl text-fest-gold-light font-normal italic max-w-3xl mx-auto mb-3 drop-shadow px-2">
-          “Where Healthcare Leaders, Cultural Heritage & Youth Energy Converge”
+          “{primaryFest.tagline}”
         </p>
 
         <p className="text-xs sm:text-sm md:text-base text-fest-champagne/90 font-sans max-w-2xl mx-auto mb-5 sm:mb-6 leading-relaxed px-2">
-          Four extraordinary days hosted by AIIMS Raebareli student societies spanning Kathak & street theatre battles,
+          Four extraordinary days hosted by AIIMS Raebareli student societies spanning Kathak &amp; street theatre battles,
           Sufi rock bands, parliamentary debates, 3D handicraft hackathons, and varsity football championships.
         </p>
 
-        {/* Live Countdown Timer */}
+        {/* Live Countdown Timer (Autosynced with Scheduled Primary Fest) */}
         <div className="w-full max-w-lg mx-auto overflow-hidden">
-          <CountdownTimer targetDate="2026-03-12T09:00:00" />
+          <CountdownTimer targetDate={primaryFest.targetDate} />
         </div>
 
         {/* Action CTAs */}

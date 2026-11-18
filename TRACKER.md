@@ -580,6 +580,56 @@
   - `npm test`: 59/59 tests passing across all 9 test suites (100% pass rate).
   - `npm run build`: Production Next.js build succeeded for all 45 static and dynamic routes.
 
+### Phase 20: Cultural Clubs Management (CRUD), Fest Scheduling & Homepage Timeclock Autosync, and Database Dummy Data Purge
+- **Status**: Completed
+- **Why**:
+  1. Empower administrators to dynamically create, curate, edit, and delete university cultural societies and clubs without touching codebase.
+  2. Empower administrators to schedule festival editions and designate a primary active fest/event that automatically synchronizes the live homepage hero countdown timeclock, title, edition, and date badge.
+  3. Purge all legacy dummy data (mock registrations, mock payments, mock tickets, demo test student accounts) from both in-memory store and MongoDB Atlas, leaving only essential administrator accounts and active clubs/fests.
+  4. Ensure end-to-end UI and backend flows are thoroughly tested with 100% Vitest pass rate and clean production build.
+- **Root Cause & Architectural Enhancements**:
+  1. *Hardcoded Homepage Countdown*:
+     - Previously, `CountdownTimer` in `src/components/home/hero-section.tsx` used a static target date `"2026-03-12T09:00:00"`.
+     - Admins had no interface to change festival dates or set a new festival edition without code changes.
+     - **Fix**: Created `StoredFest` model and `dataStore.getPrimaryCountdown()`. Built `/api/fests/primary` and `/api/fests`. `HeroSection` now dynamically polls/fetches the primary fest schedule on mount, automatically updating the countdown clock, date badge, and venue in real-time.
+  2. *Hardcoded Clubs Showcase*:
+     - Previously, `COLLEGE_CLUBS` in `src/components/home/clubs-showcase.tsx` was a static array.
+     - Admins had no UI to add new societies or manage club leads.
+     - **Fix**: Implemented `StoredClub` model, CRUD API (`/api/clubs`), and an administrative panel at `/admin/clubs`. `ClubsShowcase` dynamically loads clubs from the API, and the event creation modal at `/admin/events` dynamically populates its "Host College Club" datalist from the registered clubs.
+  3. *Removal of Dummy Data from DB*:
+     - Previously, `dataStore.seedInitialData()` contained mock test student `usr-student-1`, mock registrations `reg-demo-1001` and `reg-demo-1002`, mock payments `pay-1001` and `pay-1002`, and mock ticket `tkt-1001`.
+     - In `db-sync.ts`, these mock items were pushed into MongoDB Atlas on startup.
+     - **Fix**:
+       - Completely removed all dummy student, registration, payment, and ticket seeding from `dataStore.seedInitialData()`. Initial state for registrations, payments, and tickets is strictly empty `[]`.
+       - Added `dataStore.cleanDummyData()` and `purgeDummyDataFromMongo()` in `src/lib/db-sync.ts` which automatically purges any legacy mock records from MongoDB Atlas on first sync.
+       - Built `POST /api/admin/clean-dummy-data` and an admin card in `/admin/settings` allowing one-click database cleanup.
+       - Preserved essential administrator accounts (`admin@aiimsraebareli.edu.in`, `admin@rangmanchfest.in`, `admin@admin.com`, and any env `ADMIN_EMAIL`).
+- **Key Technical Implementations**:
+  - **Models & Persistence (`src/lib/data-store.ts`, `src/lib/mongodb.ts`, `src/lib/db-sync.ts`)**:
+    - Added `StoredClub` and `StoredFest` interfaces.
+    - Added `clubs` and `fests` MongoDB collections with unique indexes on `id`, `slug`, and `isPrimary`.
+    - Implemented full CRUD methods: `getAllClubs()`, `createClub()`, `updateClub()`, `deleteClub()`, `getAllFests()`, `createFest()`, `updateFest()`, `deleteFest()`, `setPrimaryFest()`, and `getPrimaryCountdown()`.
+    - Added `cleanDummyData()` and `purgeDummyDataFromMongo()`.
+  - **API Routes**:
+    - `GET /api/clubs`, `POST /api/clubs`, `PUT /api/clubs`, `DELETE /api/clubs`: Cultural clubs management.
+    - `GET /api/fests`, `POST /api/fests`, `PUT /api/fests`, `DELETE /api/fests`: Festival schedule management.
+    - `GET /api/fests/primary`, `POST /api/fests/primary`: Primary fest countdown timeclock autosync.
+    - `POST /api/admin/clean-dummy-data`: Database maintenance and dummy record purge.
+  - **Admin UI Modules**:
+    - `/admin/clubs/page.tsx`: Full CRUD UI for clubs (Name, Category, Motto, Coordinator, Contact, Competitions, Prizes, Badge).
+    - `/admin/fests/page.tsx`: Fest schedule manager with live timeclock autosync preview, "Set as Primary" one-click action, and schedule modal.
+    - `/admin/settings/page.tsx`: Added "Database Maintenance & Clean State" card with live purge metrics.
+    - `/admin/layout.tsx`: Added navigation links for "Fest Schedule & Timer" and "Cultural Clubs (CRUD)".
+  - **Homepage Autosync**:
+    - `src/components/home/hero-section.tsx`: Dynamically fetches `/api/fests/primary` and binds the countdown timer, edition subtitle, tagline, and date badge.
+    - `src/components/home/clubs-showcase.tsx`: Dynamically fetches `/api/clubs` to render newly created clubs.
+    - `src/app/admin/events/page.tsx`: Binds Host College Club input to `<datalist id="clubs-datalist">` populated from registered clubs.
+- **Verification & Testing Results**:
+  - `npx tsc --noEmit`: 0 TypeScript errors.
+  - `npm test`: **71/71 tests passing** across all 10 test suites (100% pass rate).
+  - Added new comprehensive test suite: `src/__tests__/clubs-and-fests-management.test.ts` (12 tests covering clubs CRUD, fest scheduling, timeclock autosync, and dummy data removal).
+  - `npm run build`: Production Next.js build succeeded for all 47 static and dynamic routes.
+
 
 
 

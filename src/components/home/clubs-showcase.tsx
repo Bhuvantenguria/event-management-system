@@ -1,6 +1,6 @@
 "use client";
 
-import React from "react";
+import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import {
   Music,
@@ -118,7 +118,46 @@ const COLLEGE_CLUBS = [
   },
 ];
 
+function getClubIcon(category: string, name: string) {
+  const c = (category + " " + name).toLowerCase();
+  if (c.includes("dance")) return Flame;
+  if (c.includes("music") || c.includes("band")) return Music;
+  if (c.includes("theatre") || c.includes("dramat")) return Theater;
+  if (c.includes("literary") || c.includes("debat") || c.includes("poet")) return BookOpen;
+  if (c.includes("arts") || c.includes("craft") || c.includes("design")) return Brush;
+  if (c.includes("sport") || c.includes("athlet")) return Trophy;
+  if (c.includes("tech") || c.includes("code") || c.includes("hack")) return Code;
+  return Sparkles;
+}
+
 export function ClubsShowcase() {
+  const [clubsList, setClubsList] = useState<any[]>(COLLEGE_CLUBS);
+
+  useEffect(() => {
+    fetch("/api/clubs")
+      .then((res) => res.json())
+      .then((data) => {
+        if (data.success && Array.isArray(data.clubs) && data.clubs.length > 0) {
+          const mapped = data.clubs.map((c: any) => ({
+            id: c.id,
+            name: c.name,
+            motto: c.motto || "Student Society of AIIMS Raebareli",
+            category: c.category || "Collegiate Society",
+            icon: getClubIcon(c.category || "", c.name || ""),
+            color: c.color || "from-fest-sunset to-fest-burgundy",
+            coordinator: c.coordinator || "General Secretariat",
+            eventsHosted: c.eventsHosted || ["Inter-Collegiate Contest"],
+            eventCount: c.eventCount || `${(c.eventsHosted || []).length || 1} Contests`,
+            prizes: c.prizes || "₹50,000",
+            href: c.href || `/events?category=${c.category?.toLowerCase() || "cultural"}`,
+            badge: c.badge || "Official Collegiate Society",
+          }));
+          setClubsList(mapped);
+        }
+      })
+      .catch(() => {});
+  }, []);
+
   return (
     <section id="clubs-showcase" className="py-24 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto border-t border-border/40">
       <HeritageDivider
@@ -131,7 +170,7 @@ export function ClubsShowcase() {
       </p>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-        {COLLEGE_CLUBS.map((club) => {
+        {clubsList.map((club) => {
           const Icon = club.icon;
           return (
             <div
@@ -169,7 +208,7 @@ export function ClubsShowcase() {
                     Competitions Curated by Club:
                   </span>
                   <div className="flex flex-wrap gap-1.5">
-                    {club.eventsHosted.map((event) => (
+                    {(club.eventsHosted || []).map((event: string) => (
                       <span
                         key={event}
                         className="text-[10px] font-semibold px-2 py-0.5 rounded-md bg-fest-champagne/40 dark:bg-fest-charcoal text-foreground border border-border"

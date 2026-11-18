@@ -36,11 +36,13 @@ import { ThemeToggle } from "@/components/theme-toggle";
 
 const ADMIN_NAV = [
   { name: "Overview", href: "/admin", icon: LayoutDashboard },
+  { name: "Fest Schedule & Timer", href: "/admin/fests", icon: Clock },
+  { name: "Cultural Clubs (CRUD)", href: "/admin/clubs", icon: Layers },
   { name: "Create & Manage Events", href: "/admin/events", icon: Calendar },
   { name: "Registrations List", href: "/admin/registrations", icon: Users },
   { name: "Payment Approvals", href: "/admin/payments", icon: CreditCard },
   { name: "Gallery Media (CRUD)", href: "/admin/gallery", icon: ImageIcon },
-  { name: "Organizer Paytm QR", href: "/admin/settings", icon: QrCode },
+  { name: "Organizer Settings & DB", href: "/admin/settings", icon: QrCode },
 ];
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {

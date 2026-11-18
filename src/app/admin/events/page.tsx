@@ -34,6 +34,7 @@ const CATEGORIES = [
 
 export default function AdminEventsPage() {
   const [eventsList, setEventsList] = useState<StoredEvent[]>([]);
+  const [availableClubs, setAvailableClubs] = useState<{ id: string; name: string }[]>([]);
   const [search, setSearch] = useState("");
   const [categoryFilter, setCategoryFilter] = useState("all");
 
@@ -84,6 +85,14 @@ export default function AdminEventsPage() {
 
   useEffect(() => {
     loadEvents();
+    fetch("/api/clubs")
+      .then((res) => res.json())
+      .then((data) => {
+        if (data.clubs && Array.isArray(data.clubs)) {
+          setAvailableClubs(data.clubs);
+        }
+      })
+      .catch(() => {});
   }, []);
 
   const openCreateModal = () => {
@@ -615,11 +624,17 @@ export default function AdminEventsPage() {
                   <label className="font-bold block mb-1 text-foreground">Host College Club</label>
                   <input
                     type="text"
+                    list="clubs-datalist"
                     placeholder="e.g. Mudra Dance Society"
                     value={formData.club}
                     onChange={(e) => setFormData({ ...formData, club: e.target.value })}
                     className="w-full px-3 py-2 rounded-xl bg-background border border-border text-foreground focus:outline-none focus:ring-2 focus:ring-fest-sunset"
                   />
+                  <datalist id="clubs-datalist">
+                    {availableClubs.map((c) => (
+                      <option key={c.id} value={c.name} />
+                    ))}
+                  </datalist>
                 </div>
               </div>
 

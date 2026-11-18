@@ -194,6 +194,50 @@ describe("Complete End-to-End User & Admin Testing Suite", () => {
     });
 
     it("B2. Overview Metrics Calculation: Aggregates counts and verified revenue correctly", () => {
+      // Ensure test registration and payment entries exist for metric verification
+      const testReg1 = dataStore.createRegistration({
+        eventId: "kathak-jugalbandi",
+        eventTitle: "Kathak Jugalbandi",
+        userId: "usr-test-metrics",
+        userName: "Metrics Tester",
+        userEmail: "metrics@example.com",
+        college: "AIIMS",
+        participationType: "individual",
+        amount: 300,
+        paymentStatus: "approved",
+        registrationStatus: "confirmed",
+      });
+      const pay1 = dataStore.submitPaymentProof({
+        registrationId: testReg1.id,
+        amountExpected: 300,
+        amountSubmitted: 300,
+        utrNumber: `407512889912${Date.now()}`,
+        paymentScreenshotUrl: "https://example.com/receipt.jpg",
+        paymentDate: "2026-03-01",
+      });
+      dataStore.reviewPayment(pay1.id, "usr-admin-1", "approve");
+
+      const testReg2 = dataStore.createRegistration({
+        eventId: "sufi-rock-night",
+        eventTitle: "Sufi Rock Night",
+        userId: "usr-test-metrics-2",
+        userName: "Metrics Tester 2",
+        userEmail: "metrics2@example.com",
+        college: "AIIMS",
+        participationType: "individual",
+        amount: 800,
+        paymentStatus: "pending_verification",
+        registrationStatus: "pending",
+      });
+      dataStore.submitPaymentProof({
+        registrationId: testReg2.id,
+        amountExpected: 800,
+        amountSubmitted: 800,
+        utrNumber: `407519992341${Date.now()}`,
+        paymentScreenshotUrl: "https://example.com/receipt.jpg",
+        paymentDate: "2026-03-02",
+      });
+
       const events = dataStore.getAllEvents();
       const registrations = dataStore.getAllRegistrations();
       const payments = dataStore.getAllPayments();
