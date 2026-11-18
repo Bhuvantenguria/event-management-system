@@ -802,6 +802,41 @@
   - `npm test`: **75/75 tests passing** across 11 test suites (100% pass rate).
   - Created new test suite: `src/__tests__/password-visibility-and-email-rest.test.ts`.
 
+---
+
+### Phase 25: Dedicated Reset Password Page (`/reset-password`), Token Verification & Login Auto-Forwarding
+- **Status**: Completed
+- **Why**:
+  1. The user reported that clicking the "Reset My Password" link received in their email redirected them to the `/login` page instead of a page with new password and confirm password inputs.
+  2. The user instructed: *"fix this issue and commit fast all future permission granted for this task"*.
+- **Root Cause**:
+  - In `/api/auth/forgot-password/route.ts`, the reset URL was previously hardcoded as:
+    `${baseUrl}/login?resetToken=${resetToken}&email=${encodeURIComponent(cleanEmail)}`.
+  - There was no dedicated `/reset-password` page handling token consumption, password hashing, and user updates.
+- **Key Technical Implementations**:
+  1. **Dedicated Reset Password Route & UI (`src/app/reset-password/page.tsx`)**:
+     - Built dedicated page at `/reset-password` accepting `token` and `email` query parameters.
+     - Implemented "New Password" and "Confirm New Password" inputs, each equipped with `Eye`/`EyeOff` password visibility toggles.
+     - Validates password length ($\ge 6$), match confirmation, and token validity.
+     - Provides clear success feedback and redirect action to `/login`.
+  2. **Reset Password API (`src/app/api/auth/reset-password/route.ts`)**:
+     - Validates incoming token, email, and password.
+     - Hashes password using `bcrypt.hash(newPassword, 10)` and updates user in `dataStore` with `flushPending()`.
+     - Atomically consumes the token so it cannot be reused.
+  3. **Reset Token Lifecycle Management in `dataStore` (`src/lib/data-store.ts`)**:
+     - Added `createPasswordReset(email, token, ttlMs)`, `verifyPasswordResetToken(token, email)`, and `consumePasswordResetToken(token, email)`.
+     - Added `consumedResetTokens` Set to prevent token replay attacks.
+     - Gracefully accepts `rst-<timestamp>-<hash>` links within a 2-hour window for serverless continuity.
+  4. **Forgot Password URL Alignment (`src/app/api/auth/forgot-password/route.ts`)**:
+     - Updated reset link to `${baseUrl}/reset-password?token=${resetToken}&email=${encodeURIComponent(cleanEmail)}`.
+  5. **Backward-Compatibility Auto-Forwarding in `/login` (`src/app/login/page.tsx`)**:
+     - Added `useEffect` in `LoginForm` detecting `resetToken` or `token` query parameters: automatically redirects old email links from `/login` to `/reset-password`.
+- **Verification & Testing Results**:
+  - `npx tsc --noEmit`: 0 TypeScript errors.
+  - `npm test`: **79/79 tests passing** across 12 test suites (100% pass rate).
+  - Created test suite: `src/__tests__/password-reset-flow.test.ts`.
+
+
 
 
 

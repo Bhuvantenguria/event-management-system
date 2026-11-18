@@ -24,8 +24,9 @@ export async function POST(request: Request) {
     // If user exists, generate reset link and dispatch email
     if (user) {
       const resetToken = `rst-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+      dataStore.createPasswordReset(cleanEmail, resetToken);
       const baseUrl = getBaseUrl();
-      const resetUrl = `${baseUrl}/login?resetToken=${resetToken}&email=${encodeURIComponent(cleanEmail)}`;
+      const resetUrl = `${baseUrl}/reset-password?token=${resetToken}&email=${encodeURIComponent(cleanEmail)}`;
 
       try {
         await sendPasswordResetEmail(cleanEmail, resetUrl);

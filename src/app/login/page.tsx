@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, Suspense } from "react";
+import React, { useState, useEffect, Suspense } from "react";
 import Link from "next/link";
 import { signIn } from "next-auth/react";
 import { useRouter, useSearchParams } from "next/navigation";
@@ -19,6 +19,18 @@ function LoginForm() {
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    const token = searchParams.get("token") || searchParams.get("resetToken");
+    const emailParam = searchParams.get("email");
+    if (token) {
+      router.replace(
+        `/reset-password?token=${encodeURIComponent(token)}${
+          emailParam ? `&email=${encodeURIComponent(emailParam)}` : ""
+        }`
+      );
+    }
+  }, [searchParams, router]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();

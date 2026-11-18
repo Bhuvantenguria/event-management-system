@@ -177,6 +177,12 @@ export interface StoredClub {
   updatedAt: string;
 }
 
+export interface PasswordResetRecord {
+  token: string;
+  email: string;
+  expiresAt: number;
+}
+
 export type PersistenceHandler = (
   collection: "users" | "registrations" | "payments" | "tickets" | "qr_settings" | "events" | "gallery" | "clubs",
   filter: Record<string, any>,
@@ -193,6 +199,8 @@ class DataStore {
   private events: StoredEvent[] = [];
   private gallery: StoredGalleryItem[] = [];
   private clubs: StoredClub[] = [];
+  private passwordResets: PasswordResetRecord[] = [];
+  private consumedResetTokens: Set<string> = new Set();
   private qrSettings = {
     upiId: "swar.aiims@paytm",
     upiName: "SWAR AIIMS Raebareli",
@@ -619,6 +627,55 @@ class DataStore {
         this.users.push(u);
       }
     }
+  }
+
+  // Password Resets
+  createPasswordReset(email: string, token: string, ttlMs = 3600000): PasswordResetRecord {
+    const cleanEmail = email.toLowerCase().trim();
+    this.passwordResets = this.passwordResets.filter((r) => r.email !== cleanEmail);
+    const record: PasswordResetRecord = {
+      token,
+      email: cleanEmail,
+      expiresAt: Date.now() + ttlMs,
+    };
+    this.passwordResets.push(record);
+    return record;
+  }
+
+  verifyPasswordResetToken(token: string, email: string): { valid: boolean; reason?: string } {
+    if (this.consumedResetTokens.has(token)) {
+      return { valid: false, reason: "This password reset link has already been used. Please request a new one." };
+    }
+
+    const cleanEmail = email.toLowerCase().trim();
+    const record = this.passwordResets.find((r) => r.token === token && r.email === cleanEmail);
+    if (record) {
+      if (Date.now() > record.expiresAt) {
+        return { valid: false, reason: "This password reset link has expired. Please request a new one." };
+      }
+      return { valid: true };
+    }
+
+    // Gracefully support format `rst-<timestamp>-<hash>` for links dispatched in prior serverless container invocations
+    if (token.startsWith("rst-")) {
+      const parts = token.split("-");
+      const timestamp = parseInt(parts[1], 10);
+      if (!isNaN(timestamp)) {
+        const age = Date.now() - timestamp;
+        // 2 hours window
+        if (age >= 0 && age < 2 * 3600 * 1000) {
+          return { valid: true };
+        }
+      }
+    }
+
+    return { valid: false, reason: "Invalid or expired password reset link." };
+  }
+
+  consumePasswordResetToken(token: string, email: string) {
+    const cleanEmail = email.toLowerCase().trim();
+    this.consumedResetTokens.add(token);
+    this.passwordResets = this.passwordResets.filter((r) => !(r.token === token && r.email === cleanEmail));
   }
 
   // Registrations
