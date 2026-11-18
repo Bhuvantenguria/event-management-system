@@ -36,9 +36,33 @@ function cleanEnv(val?: string): string {
 }
 
 /**
- * Checks whether valid Gmail SMTP credentials have been provided in the environment.
+ * Checks whether Google OAuth2 credentials have been provided in the environment.
+ */
+export function isOAuth2Configured(): boolean {
+  const clientId = cleanEnv(process.env.GOOGLE_CLIENT_ID);
+  const clientSecret = cleanEnv(process.env.GOOGLE_CLIENT_SECRET);
+  const refreshToken = cleanEnv(process.env.GOOGLE_REFRESH_TOKEN);
+  const user = cleanEnv(process.env.GMAIL_USER) || cleanEnv(process.env.SMTP_USER);
+
+  if (!clientId || !clientSecret || !refreshToken || !user) return false;
+  if (
+    clientId.includes("your_") ||
+    clientSecret.includes("your_") ||
+    refreshToken.includes("your_") ||
+    clientId.includes("placeholder")
+  ) {
+    return false;
+  }
+  return true;
+}
+
+/**
+ * Checks whether valid Gmail email dispatch credentials (either OAuth2 or App Password/SMTP)
+ * have been provided in the environment.
  */
 export function isSmtpConfigured(): boolean {
+  if (isOAuth2Configured()) return true;
+
   const user = cleanEnv(process.env.SMTP_USER);
   const pass = cleanEnv(process.env.SMTP_PASS);
 
@@ -56,20 +80,20 @@ export function isSmtpConfigured(): boolean {
 
 /**
  * Returns the sanitized sender address.
- * Gmail SMTP requires that the "from" address matches the authenticated Gmail user.
+ * Gmail requires that the "from" address matches the authenticated Gmail user.
  */
 export function getSenderAddress(): string {
   const appName = cleanEnv(process.env.NEXT_PUBLIC_APP_NAME) || "AffinityAIIMS '26";
-  const user = cleanEnv(process.env.SMTP_USER);
+  const user = cleanEnv(process.env.GMAIL_USER) || cleanEnv(process.env.SMTP_USER);
 
   if (process.env.EMAIL_FROM && process.env.EMAIL_FROM.trim()) {
     const fromVal = process.env.EMAIL_FROM.trim();
-    // If SMTP_USER is set to a Gmail account, and EMAIL_FROM has a different @gmail.com address,
-    // Google SMTP rejects sending mail as a different Gmail user (550 / 553 / bad credentials).
+    // If authenticated user is a Gmail account, and EMAIL_FROM has a different @gmail.com address,
+    // Google rejects sending mail as a different Gmail user (550 / 553 / bad credentials).
     // In this case, align sender with the authenticated user:
     if (user && fromVal.includes("@gmail.com") && !fromVal.toLowerCase().includes(user.toLowerCase())) {
       console.warn(
-        `[Email Notice] EMAIL_FROM (${fromVal}) uses a different Gmail address than authenticated SMTP_USER (${user}). Automatically aligning sender address to prevent Gmail SMTP authentication rejection.`
+        `[Email Notice] EMAIL_FROM (${fromVal}) uses a different Gmail address than authenticated user (${user}). Automatically aligning sender address to prevent Gmail authentication rejection.`
       );
       return `"${appName}" <${user}>`;
     }
@@ -83,10 +107,11 @@ export function getSenderAddress(): string {
 /**
  * Creates and configures a Nodemailer transporter.
  * Robustly handles:
- *  1. Google App Passwords copied with spaces (e.g. "abcd efgh ijkl mnop") -> sanitized to "abcdefghijklmnop".
- *  2. Gmail service preset vs custom host/port settings.
- *  3. Port 465 (SSL direct, secure: true) vs Port 587 (TLS/STARTTLS, secure: false).
- *  4. Graceful simulation mode when credentials are absent or placeholders.
+ *  1. Google OAuth2 (GMAIL_USER, GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET, GOOGLE_REFRESH_TOKEN).
+ *  2. Google App Passwords copied with spaces (e.g. "abcd efgh ijkl mnop") -> sanitized to "abcdefghijklmnop".
+ *  3. Gmail service preset vs custom host/port settings.
+ *  4. Port 465 (SSL direct, secure: true) vs Port 587 (TLS/STARTTLS, secure: false).
+ *  5. Graceful simulation mode when credentials are absent or placeholders.
  */
 export function createTransporter() {
   if (!isSmtpConfigured()) {
@@ -94,6 +119,26 @@ export function createTransporter() {
     return null;
   }
 
+  // 1. Google OAuth2 Transport
+  if (isOAuth2Configured()) {
+    const user = cleanEnv(process.env.GMAIL_USER) || cleanEnv(process.env.SMTP_USER);
+    const clientId = cleanEnv(process.env.GOOGLE_CLIENT_ID);
+    const clientSecret = cleanEnv(process.env.GOOGLE_CLIENT_SECRET);
+    const refreshToken = cleanEnv(process.env.GOOGLE_REFRESH_TOKEN);
+
+    return nodemailer.createTransport({
+      service: "gmail",
+      auth: {
+        type: "OAuth2",
+        user,
+        clientId,
+        clientSecret,
+        refreshToken,
+      },
+    });
+  }
+
+  // 2. Google App Password / SMTP Transport
   const user = cleanEnv(process.env.SMTP_USER);
   // Strip all whitespace from the Google App Password
   const pass = cleanEnv(process.env.SMTP_PASS).replace(/\s+/g, "");
@@ -151,56 +196,64 @@ export async function verifySmtpConnection(): Promise<{
   user?: string;
   host?: string;
   port?: number;
+  authMethod?: "OAuth2" | "AppPassword" | "None";
   error?: string;
 }> {
   if (!isSmtpConfigured()) {
     return {
       configured: false,
       connected: false,
+      authMethod: "None",
       message:
-        "Gmail SMTP credentials are not configured in environment variables. Email notifications will operate in graceful simulation mode.",
+        "Gmail credentials (either OAuth2 or Google App Password) are not configured in environment variables. Email notifications will operate in graceful simulation mode.",
     };
   }
 
+  const isOAuth = isOAuth2Configured();
   const transporter = createTransporter();
   if (!transporter) {
     return {
       configured: false,
       connected: false,
+      authMethod: isOAuth ? "OAuth2" : "AppPassword",
       message: "Failed to initialize email transporter.",
     };
   }
 
-  const user = cleanEnv(process.env.SMTP_USER);
-  const host = cleanEnv(process.env.SMTP_HOST) || "smtp.gmail.com";
-  const port = parseInt(cleanEnv(process.env.SMTP_PORT) || "465", 10);
+  const user = cleanEnv(process.env.GMAIL_USER) || cleanEnv(process.env.SMTP_USER);
+  const host = isOAuth ? "Gmail OAuth2 (google.com)" : cleanEnv(process.env.SMTP_HOST) || "smtp.gmail.com";
+  const port = isOAuth ? 465 : parseInt(cleanEnv(process.env.SMTP_PORT) || "465", 10);
 
   try {
     await transporter.verify();
     return {
       configured: true,
       connected: true,
-      message: `Gmail SMTP connection established successfully! Ready to dispatch live emails as ${user}.`,
+      authMethod: isOAuth ? "OAuth2" : "AppPassword",
+      message: `Gmail ${isOAuth ? "OAuth2" : "SMTP"} connection established successfully! Ready to dispatch live emails as ${user}.`,
       user,
       host,
       port,
     };
   } catch (error: any) {
     const errorMsg = error?.message || String(error);
-    console.error("[Email SMTP Verify Error]:", errorMsg);
+    console.error("[Email Verify Error]:", errorMsg);
 
-    let userFriendlyMessage = `SMTP connection failed: ${errorMsg}`;
+    let userFriendlyMessage = `${isOAuth ? "OAuth2" : "SMTP"} connection failed: ${errorMsg}`;
     if (
       errorMsg.includes("535") ||
       errorMsg.includes("Username and Password not accepted") ||
       errorMsg.includes("BadCredentials")
     ) {
-      userFriendlyMessage = `Google SMTP Authentication Rejected (535-5.7.8): Google accounts require a 16-character Google App Password (not your regular personal password). To fix: 1. Enable 2-Step Verification at myaccount.google.com/security. 2. Visit myaccount.google.com/apppasswords. 3. Generate a 16-character App Password (e.g. for 'AffinityAIIMS'). 4. Set SMTP_PASS in your Vercel or local environment variables.`;
+      userFriendlyMessage = `Google SMTP Authentication Rejected (535-5.7.8): Google accounts require a 16-character Google App Password (not your regular personal password). Alternatively, set up Google OAuth2 with GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET, and GOOGLE_REFRESH_TOKEN.`;
+    } else if (errorMsg.includes("invalid_grant") || errorMsg.includes("Token has been expired or revoked")) {
+      userFriendlyMessage = `Google OAuth2 Token Expired or Revoked (invalid_grant): The GOOGLE_REFRESH_TOKEN is invalid or expired. In Google Cloud testing mode, refresh tokens expire every 7 days. Please regenerate a refresh token or set the OAuth consent screen to In Production.`;
     }
 
     return {
       configured: true,
       connected: false,
+      authMethod: isOAuth ? "OAuth2" : "AppPassword",
       message: userFriendlyMessage,
       user,
       host,

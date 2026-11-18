@@ -1,6 +1,6 @@
 import { MongoClient, Db, Collection, MongoClientOptions } from "mongodb";
 
-const uri = process.env.MONGODB_URI || "";
+const uri = (process.env.MONGODB_URI || "").trim();
 const options: MongoClientOptions = {
   serverSelectionTimeoutMS: 5000,
   maxPoolSize: 10,
@@ -8,11 +8,11 @@ const options: MongoClientOptions = {
 };
 
 let client: MongoClient;
-let clientPromise: Promise<MongoClient> | null = null;
+let clientPromise: Promise<MongoClient | null> | null = null;
 
 declare global {
   // eslint-disable-next-line no-var
-  var _mongoClientPromise: Promise<MongoClient> | undefined;
+  var _mongoClientPromise: Promise<MongoClient | null> | undefined;
   // eslint-disable-next-line no-var
   var _mongoIndexesInitialized: boolean | undefined;
 }
@@ -20,8 +20,18 @@ declare global {
 if (uri) {
   // Preserve client promise across HMR in development and across warm lambdas in serverless
   if (!global._mongoClientPromise) {
-    client = new MongoClient(uri, options);
-    global._mongoClientPromise = client.connect();
+    try {
+      client = new MongoClient(uri, options);
+      // Attach catch handler immediately to prevent unhandled promise rejection process crash (exit code 128)
+      global._mongoClientPromise = client.connect().catch((err) => {
+        console.warn("⚠️ MongoDB Atlas connection notice (timeout/unreachable):", err?.message || err);
+        console.warn("ℹ️ Falling back to in-memory data store for serverless stability.");
+        return null;
+      });
+    } catch (initErr) {
+      console.warn("⚠️ MongoClient constructor error:", initErr);
+      global._mongoClientPromise = Promise.resolve(null);
+    }
   }
   clientPromise = global._mongoClientPromise;
 } else {
@@ -34,7 +44,8 @@ if (uri) {
 export async function getMongoClient(): Promise<MongoClient | null> {
   if (!clientPromise) return null;
   try {
-    return await clientPromise;
+    const connectedClient = await clientPromise;
+    return connectedClient || null;
   } catch (error) {
     console.error("❌ Failed to connect to MongoDB Atlas:", error);
     return null;

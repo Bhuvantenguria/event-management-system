@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeEach, vi } from "vitest";
 import {
   isSmtpConfigured,
+  isOAuth2Configured,
   getSenderAddress,
   createTransporter,
   verifySmtpConnection,
@@ -16,7 +17,8 @@ import {
   sendTestEmail,
   emailDispatchLogs,
 } from "@/lib/email";
-import { getBaseUrl, PRODUCTION_URL } from "@/lib/utils";
+import { getBaseUrl, PRODUCTION_URL, sanitizeUrl } from "@/lib/utils";
+import { authOptions } from "@/lib/auth";
 import { dataStore } from "@/lib/data-store";
 import bcrypt from "bcryptjs";
 
@@ -63,6 +65,34 @@ describe("Gmail SMTP Email Sending Pipeline & Diagnostics", () => {
       else delete process.env.SMTP_USER;
       if (origPass) process.env.SMTP_PASS = origPass;
       else delete process.env.SMTP_PASS;
+    });
+
+    it("should recognize Google OAuth2 configuration and create OAuth2 transporter", () => {
+      const origClientId = process.env.GOOGLE_CLIENT_ID;
+      const origSecret = process.env.GOOGLE_CLIENT_SECRET;
+      const origRefresh = process.env.GOOGLE_REFRESH_TOKEN;
+      const origGmailUser = process.env.GMAIL_USER;
+
+      process.env.GOOGLE_CLIENT_ID = "mock-client-id.apps.googleusercontent.com";
+      process.env.GOOGLE_CLIENT_SECRET = "mock-client-secret-123";
+      process.env.GOOGLE_REFRESH_TOKEN = "1//mock-refresh-token-xyz";
+      process.env.GMAIL_USER = "fest.organizer@gmail.com";
+
+      expect(isOAuth2Configured()).toBe(true);
+      expect(isSmtpConfigured()).toBe(true);
+
+      const transporter = createTransporter();
+      expect(transporter).not.toBeNull();
+
+      // Cleanup
+      if (origClientId) process.env.GOOGLE_CLIENT_ID = origClientId;
+      else delete process.env.GOOGLE_CLIENT_ID;
+      if (origSecret) process.env.GOOGLE_CLIENT_SECRET = origSecret;
+      else delete process.env.GOOGLE_CLIENT_SECRET;
+      if (origRefresh) process.env.GOOGLE_REFRESH_TOKEN = origRefresh;
+      else delete process.env.GOOGLE_REFRESH_TOKEN;
+      if (origGmailUser) process.env.GMAIL_USER = origGmailUser;
+      else delete process.env.GMAIL_USER;
     });
 
     it("should compute robust sender address matching authenticated user", () => {
@@ -131,6 +161,34 @@ describe("Gmail SMTP Email Sending Pipeline & Diagnostics", () => {
       else delete process.env.SMTP_USER;
       if (origPass) process.env.SMTP_PASS = origPass;
       else delete process.env.SMTP_PASS;
+    });
+
+    it("should recognize Google OAuth2 configuration and create OAuth2 transporter", () => {
+      const origClientId = process.env.GOOGLE_CLIENT_ID;
+      const origSecret = process.env.GOOGLE_CLIENT_SECRET;
+      const origRefresh = process.env.GOOGLE_REFRESH_TOKEN;
+      const origGmailUser = process.env.GMAIL_USER;
+
+      process.env.GOOGLE_CLIENT_ID = "mock-client-id.apps.googleusercontent.com";
+      process.env.GOOGLE_CLIENT_SECRET = "mock-client-secret-123";
+      process.env.GOOGLE_REFRESH_TOKEN = "1//mock-refresh-token-xyz";
+      process.env.GMAIL_USER = "fest.organizer@gmail.com";
+
+      expect(isOAuth2Configured()).toBe(true);
+      expect(isSmtpConfigured()).toBe(true);
+
+      const transporter = createTransporter();
+      expect(transporter).not.toBeNull();
+
+      // Cleanup
+      if (origClientId) process.env.GOOGLE_CLIENT_ID = origClientId;
+      else delete process.env.GOOGLE_CLIENT_ID;
+      if (origSecret) process.env.GOOGLE_CLIENT_SECRET = origSecret;
+      else delete process.env.GOOGLE_CLIENT_SECRET;
+      if (origRefresh) process.env.GOOGLE_REFRESH_TOKEN = origRefresh;
+      else delete process.env.GOOGLE_REFRESH_TOKEN;
+      if (origGmailUser) process.env.GMAIL_USER = origGmailUser;
+      else delete process.env.GMAIL_USER;
     });
   });
 
@@ -352,6 +410,41 @@ describe("Gmail SMTP Email Sending Pipeline & Diagnostics", () => {
       );
       expect(resubmitLog).toBeDefined();
       expect(resubmitLog?.subject).toContain("Resubmit Payment Proof");
+    });
+  });
+
+  describe("5. URL Sanitization and NextAuth Header Protection", () => {
+    it("should sanitize URLs containing newlines, spaces, and carriage returns", () => {
+      const dirtyUrl = "https://event-management-system-theta-lac.vercel.app/\n \n///";
+      const cleaned = sanitizeUrl(dirtyUrl);
+      expect(cleaned).toBe("https://event-management-system-theta-lac.vercel.app");
+      expect(cleaned).not.toContain("\n");
+      expect(cleaned).not.toContain(" ");
+    });
+
+    it("should handle redirect callback cleanly without newline injection in headers", async () => {
+      const origEnv = process.env.NEXTAUTH_URL;
+      process.env.NEXTAUTH_URL = "https://event-management-system-theta-lac.vercel.app/\n ";
+
+      const redirectFn = (authOptions.callbacks as any)?.redirect;
+      expect(redirectFn).toBeDefined();
+
+      const result = await redirectFn({
+        url: "\n \n/dashboard",
+        baseUrl: "https://event-management-system-theta-lac.vercel.app/\n ",
+      });
+
+      expect(result).toBe("https://event-management-system-theta-lac.vercel.app/dashboard");
+      expect(result).not.toContain("\n");
+      expect(result).not.toContain(" ");
+
+      // Verify Undici / Node Headers doesn't throw
+      const headers = new Headers();
+      expect(() => headers.set("Location", result)).not.toThrow();
+
+      // Cleanup
+      if (origEnv) process.env.NEXTAUTH_URL = origEnv;
+      else delete process.env.NEXTAUTH_URL;
     });
   });
 });

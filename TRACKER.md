@@ -530,6 +530,56 @@
   - `npm test`: 55/55 tests passing across all 9 test suites (100% pass rate).
   - `npm run build`: All 55 routes compiled with code 0.
 
+### Phase 19: Gmail OAuth2 Integration, NextAuth Header Injection Fix & MongoDB Atlas Serverless Resilience
+- **Status**: Completed
+- **Why**:
+  1. Add native support for Google OAuth2 mail dispatch (`GMAIL_USER`, `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `GOOGLE_REFRESH_TOKEN`) alongside existing Google App Password/SMTP mode.
+  2. Fix Vercel runtime crash: `TypeError: Headers.set: "https://event-management-system-theta-lac.vercel.app/\n \n/dashboard" is an invalid header value` in `/api/auth/callback/credentials`.
+  3. Fix MongoDB Atlas serverless crash: `Unhandled Rejection: MongoServerSelectionError: Server selection timed out after 5000 ms` exiting with status 128 in `/api/auth/providers`.
+  4. Provide exhaustive analysis of the user's provided env variables (`SMTP_PASS="Aiims12345678"`, `EMAIL_FROM="Rangmanch UP Cultural Fest <fest.cultural.up@gmail.com>"`).
+- **Root Cause Analysis**:
+  1. *Header Injection in NextAuth Redirect*:
+     - On Vercel, `NEXTAUTH_URL` or the incoming callback URL contained trailing carriage returns, newlines, and spaces (`\n \n`).
+     - NextAuth's `redirect` callback concatenated `${targetBase}${url}` producing `"https://event-management-system-theta-lac.vercel.app/\n \n/dashboard"`.
+     - Undici / Node.js HTTP `Headers.set("Location", ...)` strictly validates header values and throws a fatal `TypeError` whenever carriage returns or newlines are present.
+  2. *MongoDB Atlas Serverless Timeout Exit 128*:
+     - When `MONGODB_URI` is provided, `src/lib/mongodb.ts` called `global._mongoClientPromise = client.connect()` at the module root without an immediate `.catch()` handler.
+     - When deployed to Vercel, if MongoDB Atlas IP whitelist does not permit serverless dynamic IPs (`0.0.0.0/0`) or times out (5000 ms), the unhandled promise rejection crashed the Node.js serverless execution context with exit status 128.
+  3. *Gmail Delivery Failure with `SMTP_PASS="Aiims12345678"`*:
+     - Google discontinued basic password authentication on May 30, 2022. A personal account password (`Aiims12345678`) is rejected by `smtp.gmail.com` with `535 5.7.8 BadCredentials`.
+     - Valid options are: Option A (Google OAuth2 via Refresh Token) or Option B (16-character Google App Password).
+- **Key Technical Implementations**:
+  - **URL Sanitization & Header Protection (`src/lib/utils.ts` & `src/lib/auth/index.ts`)**:
+    - Created `sanitizeUrl(url)`: aggressively strips `[\r\n\t\0\s]+` and trailing slashes.
+    - Updated `getBaseUrl()` and NextAuth `redirect` callback to sanitize both `baseUrl`, `url`, `NEXTAUTH_URL`, and `VERCEL_URL`.
+    - Added both `event-management-system-kappa-gold.vercel.app` and `event-management-system-theta-lac.vercel.app` to allowed redirect domains.
+    - Added unit test confirming Undici `Headers.set("Location", result)` passes without throwing.
+  - **MongoDB Atlas Serverless Resilience (`src/lib/mongodb.ts`)**:
+    - Wrapped `client.connect()` with an immediate `.catch()` handler so top-level rejection never triggers an unhandled rejection or process exit 128.
+    - Gracefully logs a clear diagnostic warning and falls back to in-memory `dataStore` for high availability.
+  - **Gmail OAuth2 & Dual-Engine Transporter (`src/lib/email/index.ts`)**:
+    - Implemented `isOAuth2Configured()`: detects `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `GOOGLE_REFRESH_TOKEN`, and `GMAIL_USER` (or `SMTP_USER`).
+    - Configured Nodemailer OAuth2 transport:
+      ```typescript
+      nodemailer.createTransport({
+        service: "gmail",
+        auth: {
+          type: "OAuth2",
+          user: process.env.GMAIL_USER || process.env.SMTP_USER,
+          clientId: process.env.GOOGLE_CLIENT_ID,
+          clientSecret: process.env.GOOGLE_CLIENT_SECRET,
+          refreshToken: process.env.GOOGLE_REFRESH_TOKEN,
+        },
+      });
+      ```
+    - Updated `verifySmtpConnection()` to diagnose OAuth2 vs App Password, handling `invalid_grant` token expiry and providing clear guidance.
+    - Updated admin email diagnostic API (`/api/admin/email`) to expose `authMethod: "OAuth2" | "AppPassword" | "none"`.
+    - Updated `.env.example` with complete configuration guides for both Option A (OAuth2) and Option B (App Password).
+- **Verification & Testing Results**:
+  - `npx tsc --noEmit`: 0 TypeScript errors.
+  - `npm test`: 59/59 tests passing across all 9 test suites (100% pass rate).
+  - `npm run build`: Production Next.js build succeeded for all 45 static and dynamic routes.
+
 
 
 

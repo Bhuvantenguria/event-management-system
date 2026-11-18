@@ -7,6 +7,7 @@ import {
   sendTestEmail,
   emailDispatchLogs,
   isSmtpConfigured,
+  isOAuth2Configured,
   getSenderAddress,
 } from "@/lib/email";
 
@@ -14,7 +15,7 @@ export const dynamic = "force-dynamic";
 
 /**
  * GET /api/admin/email
- * Returns SMTP connection status, configuration state, sender address, and recent dispatch logs.
+ * Returns SMTP/OAuth2 connection status, configuration state, sender address, and recent dispatch logs.
  */
 export async function GET() {
   const session = await getServerSession(authOptions);
@@ -28,16 +29,18 @@ export async function GET() {
   }
 
   const isConfigured = isSmtpConfigured();
+  const isOAuth = isOAuth2Configured();
   const senderAddress = getSenderAddress();
-  const smtpUser = process.env.SMTP_USER || null;
-  const smtpHost = process.env.SMTP_HOST || "smtp.gmail.com";
+  const emailUser = process.env.GMAIL_USER || process.env.SMTP_USER || null;
+  const smtpHost = isOAuth ? "Gmail OAuth2 API" : process.env.SMTP_HOST || "smtp.gmail.com";
   const smtpPort = process.env.SMTP_PORT || "465";
 
   return NextResponse.json({
     status: isConfigured ? "configured" : "simulation_mode",
     isConfigured,
+    authMethod: isOAuth ? "OAuth2" : isConfigured ? "AppPassword" : "none",
     senderAddress,
-    smtpUser,
+    smtpUser: emailUser,
     smtpHost,
     smtpPort,
     logs: emailDispatchLogs.slice(0, 20),

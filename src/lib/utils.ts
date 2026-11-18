@@ -30,26 +30,36 @@ export function formatDate(dateStr: string | Date | null | undefined): string {
 export const PRODUCTION_URL = "https://event-management-system-kappa-gold.vercel.app";
 
 /**
+ * Sanitizes URLs by removing all whitespaces, tabs, newlines, null characters, and trailing slashes.
+ * Crucial for preventing HTTP Header splitting errors (TypeError: Headers.set: ... is an invalid header value).
+ */
+export function sanitizeUrl(url?: string | null): string {
+  if (!url) return "";
+  return url.replace(/[\r\n\t\0\s]+/g, "").replace(/\/+$/, "");
+}
+
+/**
  * Dynamically resolves the base application URL.
  * Automatically uses window.location.origin in the browser,
  * or production domain on Vercel, avoiding unwanted localhost:3000 redirects.
  */
 export function getBaseUrl(): string {
   if (typeof window !== "undefined" && window.location?.origin) {
-    return window.location.origin;
+    return sanitizeUrl(window.location.origin);
   }
 
-  const nextAuthUrl = process.env.NEXTAUTH_URL;
+  const nextAuthUrl = sanitizeUrl(process.env.NEXTAUTH_URL);
   if (nextAuthUrl && !nextAuthUrl.includes("localhost")) {
-    return nextAuthUrl.replace(/\/+$/, "");
+    return nextAuthUrl;
   }
 
   if (process.env.VERCEL_URL) {
-    return `https://${process.env.VERCEL_URL.replace(/\/+$/, "")}`;
+    const cleanVercel = sanitizeUrl(process.env.VERCEL_URL);
+    return cleanVercel.startsWith("http") ? cleanVercel : `https://${cleanVercel}`;
   }
 
   if (nextAuthUrl) {
-    return nextAuthUrl.replace(/\/+$/, "");
+    return nextAuthUrl;
   }
 
   return PRODUCTION_URL;

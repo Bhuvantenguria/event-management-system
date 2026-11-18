@@ -3,6 +3,7 @@ import CredentialsProvider from "next-auth/providers/credentials";
 import bcrypt from "bcryptjs";
 import { dataStore } from "@/lib/data-store";
 import { syncWithMongo } from "@/lib/db-sync";
+import { sanitizeUrl } from "@/lib/utils";
 
 export const authOptions: NextAuthOptions = {
   session: {
@@ -130,31 +131,40 @@ export const authOptions: NextAuthOptions = {
     },
     async redirect({ url, baseUrl }) {
       const prodUrl = "https://event-management-system-kappa-gold.vercel.app";
-      const envUrl = process.env.NEXTAUTH_URL;
+      const cleanEnv = sanitizeUrl(process.env.NEXTAUTH_URL);
+      const cleanBase = sanitizeUrl(baseUrl);
+      const rawUrl = url || "/";
+      const cleanUrl = rawUrl.replace(/[\r\n\t\0\s]+/g, "").trim();
+
       const targetBase =
-        envUrl && !envUrl.includes("localhost")
-          ? envUrl.replace(/\/+$/, "")
-          : baseUrl && !baseUrl.includes("localhost")
-          ? baseUrl.replace(/\/+$/, "")
+        cleanEnv && !cleanEnv.includes("localhost")
+          ? cleanEnv
+          : cleanBase && !cleanBase.includes("localhost")
+          ? cleanBase
           : prodUrl;
 
-      if (url.startsWith("/")) {
-        return `${targetBase}${url}`;
+      // Handle relative paths
+      if (cleanUrl.startsWith("/")) {
+        const full = `${targetBase}${cleanUrl}`;
+        // Normalize any duplicate slashes between domain and path
+        return full.replace(/([^:])\/{2,}/g, "$1/");
       }
 
       try {
-        const urlObj = new URL(url);
+        const urlObj = new URL(cleanUrl);
         const allowedHosts = [
           "event-management-system-kappa-gold.vercel.app",
+          "event-management-system-theta-lac.vercel.app",
           new URL(targetBase).hostname,
         ];
         if (process.env.VERCEL_URL) {
           try {
-            allowedHosts.push(new URL(`https://${process.env.VERCEL_URL}`).hostname);
+            const vercelClean = sanitizeUrl(process.env.VERCEL_URL);
+            allowedHosts.push(new URL(vercelClean.startsWith("http") ? vercelClean : `https://${vercelClean}`).hostname);
           } catch {}
         }
         if (allowedHosts.includes(urlObj.hostname)) {
-          return url;
+          return cleanUrl;
         }
       } catch {}
 
