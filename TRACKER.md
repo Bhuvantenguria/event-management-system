@@ -630,6 +630,60 @@
   - Added new comprehensive test suite: `src/__tests__/clubs-and-fests-management.test.ts` (12 tests covering clubs CRUD, fest scheduling, timeclock autosync, and dummy data removal).
   - `npm run build`: Production Next.js build succeeded for all 47 static and dynamic routes.
 
+---
+
+### Phase 21: Fest Entity Elimination, Primary Event Homepage Countdown Autosync & Inline Club Registration
+- **Status**: Completed
+- **Why**:
+  1. The user explicitly instructed: *"fest is event type so donot need to create a separate if i create a primary event show that event countdown to homepage also remove this fest concept totally on click for regristraion under countdown redirect to page of regristration of that event remove unecessory thing and for clube we can create clubs while creating events such as choose from exixting clube or register new clubs like this flow"*.
+  2. Eliminate the redundant standalone "Fest" entity, database collections, and routes (`/admin/fests`, `/api/fests`), treating "fest" simply as an event type.
+  3. Allow administrators to designate any event as the **Primary Flagship Event** (`isPrimary: true`), which dynamically synchronizes the live homepage countdown timer, title, date, venue, club, and prize pool.
+  4. Ensure that clicking the registration CTA button under the homepage countdown timer redirects directly to that Primary Event's specific registration page (`/events/${primaryEvent.slug}/register`).
+  5. Streamline the Collegiate Clubs flow: when creating or editing an event in `/admin/events`, provide an inline dual-mode selector allowing the administrator to either choose from existing registered clubs or register a brand-new club inline without leaving the modal.
+  6. Maintain zero dummy data in the database (preserving only essential admin credentials and active clubs/events).
+
+- **Key Architectural & Code Changes**:
+  1. **Primary Event Synchronization & Countdown Resolver (`src/lib/data-store.ts`)**:
+     - Added `isPrimary?: boolean` flag to `StoredEvent`.
+     - In `createEvent()` and `updateEvent()`: when `isPrimary: true` is passed, automatically unsets `isPrimary` on all other events and persists.
+     - Implemented `getPrimaryEvent(): StoredEvent | undefined`.
+     - Implemented `setPrimaryEvent(id: string): boolean`.
+     - Implemented `parseEventDateTimeToIso(dateStr?, timeStr?)`: cleanly converts flexible event date/time formats (e.g. `"13 March 2026"`, `"12–15 March 2026"`, `"05:00 PM"`) into standard ISO format for countdown clocks.
+     - Implemented `getPrimaryEventCountdown()`: returns `{ success: true, primaryEvent, targetDate, registrationUrl: "/events/${primaryEvent.slug}/register", title, venue, club, date, time, prizePool, registrationFee, category, status, poster }`.
+     - Seeded initial flagship event `kathak-jugalbandi` with `isPrimary: true`.
+     - Completely removed `StoredFest` interface, `this.fests`, and all fest methods (`getAllFests`, `getFestById`, `getPrimaryFest`, `createFest`, `updateFest`, `deleteFest`, `setPrimaryFest`, `loadFestsFromMongo`, `getPrimaryCountdown`).
+  2. **MongoDB & Database Sync Cleanup (`src/lib/mongodb.ts`, `src/lib/db-sync.ts`, `src/lib/seed-mongo.ts`, `/api/admin/clean-dummy-data`)**:
+     - Removed `fests` collection, indexes, and `getFestsCollection` from `mongodb.ts`.
+     - Removed `StoredFest` and fest sync loop from `db-sync.ts`.
+     - Removed fest seeding from `seed-mongo.ts`.
+     - Replaced `festsCount` with `eventsCount` in `/api/admin/clean-dummy-data`.
+  3. **Primary Event Public & Admin API (`src/app/api/events/primary/route.ts`)**:
+     - Created `GET /api/events/primary`: public endpoint providing countdown date, primary event details, and direct `registrationUrl`.
+     - Created `POST /api/events/primary`: admin endpoint allowing 1-click designation of the Primary Event via `{ eventId }`.
+     - Completely deleted obsolete routes: `src/app/api/fests/route.ts`, `src/app/api/fests/primary/route.ts`, and `src/app/admin/fests/page.tsx`.
+  4. **Homepage Hero Section Countdown & Direct Registration (`src/components/home/hero-section.tsx`)**:
+     - Synchronized live countdown timer with `GET /api/events/primary`.
+     - Under the countdown timer, the primary registration CTA button dynamically sets `href={primaryEvent.registrationUrl}` (`/events/${primaryEvent.slug}/register`), with label `Register for ${primaryEvent.title}`.
+     - Dynamically renders Primary Event badges, venue, club, date, and prize pool on the hero banner.
+  5. **Admin Events Page: Inline Club Creation & Primary Designation (`src/app/admin/events/page.tsx`)**:
+     - **Host College Club Dual-Mode**:
+       - `[Choose Existing Club]`: Select dropdown populated from registered clubs (`availableClubs`).
+       - `[+ Register New Club]`: Inline fields for New Club Name, Category, Motto/Tagline, and Coordinator Name/Phone.
+       - Upon saving the event with a new club, automatically calls `POST /api/clubs`, persists the new club in MongoDB Atlas, and assigns it to the new event.
+     - **Primary Event Controls**:
+       - Added checkbox in event modal: `Mark as Primary Event (Syncs with Homepage Countdown & Hero Pass)`.
+       - Added golden `⭐ Primary Event (Homepage Timer)` badge in the events table list.
+       - Added 1-click `Star` quick-action button in the table actions to instantly designate any event as the Primary Event.
+  6. **Admin Sidebar Navigation (`src/app/admin/layout.tsx`)**:
+     - Removed obsolete `Fest Schedule & Timer` link.
+     - Updated `Create & Manage Events` to `Events & Primary Countdown`.
+
+- **Verification & Testing Results**:
+  - `npx tsc --noEmit`: 0 TypeScript errors.
+  - `npm test`: **70/70 tests passing** across all 10 test suites (100% pass rate).
+  - Updated `src/__tests__/clubs-and-fests-management.test.ts` to test primary event countdown autosync, ISO timestamp parsing, direct registration URL, and inline club creation during event creation.
+  - `npm run build`: Production Next.js build compiled successfully for all 46 static and dynamic routes.
+
 
 
 

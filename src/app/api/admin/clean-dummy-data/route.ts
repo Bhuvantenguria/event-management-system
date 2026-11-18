@@ -10,7 +10,7 @@ export const dynamic = "force-dynamic";
 /**
  * POST /api/admin/clean-dummy-data
  * Administrator utility to purge all legacy dummy and mock records from dataStore and MongoDB Atlas,
- * ensuring only essential administrative data and active clubs/fests remain.
+ * ensuring only essential administrative data and active clubs/events remain.
  */
 export async function POST() {
   const session = await getServerSession(authOptions);
@@ -33,7 +33,7 @@ export async function POST() {
       remainingPayments: dataStore.getAllPayments().length,
       remainingTickets: dataStore.getAllTickets().length,
       clubsCount: dataStore.getAllClubs().length,
-      festsCount: dataStore.getAllFests().length,
+      eventsCount: dataStore.getAllEvents().length,
     });
   } catch (error: any) {
     return NextResponse.json({ error: error?.message || "Failed to purge dummy data." }, { status: 500 });

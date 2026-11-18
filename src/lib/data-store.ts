@@ -1,5 +1,52 @@
 import bcrypt from "bcryptjs";
 
+/**
+ * Robustly parses festival & event date/time strings into valid ISO format for countdown timers.
+ * Handles formats like:
+ * - "13 March 2026" + "05:00 PM"
+ * - "12–15 March 2026" + "08:00 AM" (takes first start date)
+ * - "2026-03-12" + "10:00"
+ */
+export function parseEventDateTimeToIso(dateStr?: string, timeStr?: string): string {
+  if (!dateStr) return "2026-03-12T09:00:00.000Z";
+
+  if (dateStr.includes("T")) {
+    const d = new Date(dateStr);
+    if (!isNaN(d.getTime())) return d.toISOString();
+  }
+
+  // Handle date ranges like "12–15 March 2026" or "12-15 March 2026"
+  let cleanDate = dateStr.replace(/[–—]/g, "-").trim();
+  if (cleanDate.match(/^\d{1,2}\s*-\s*\d{1,2}\s+/)) {
+    cleanDate = cleanDate.replace(/^(\d{1,2})\s*-\s*\d{1,2}\s+/, "$1 ");
+  }
+
+  // Parse time
+  let hours = 9;
+  let minutes = 0;
+  if (timeStr) {
+    const match12 = timeStr.match(/(\d{1,2}):(\d{2})\s*(AM|PM)?/i);
+    if (match12) {
+      let h = parseInt(match12[1], 10);
+      const m = parseInt(match12[2], 10);
+      const meridiem = match12[3]?.toUpperCase();
+      if (meridiem === "PM" && h < 12) h += 12;
+      if (meridiem === "AM" && h === 12) h = 0;
+      hours = h;
+      minutes = m;
+    }
+  }
+
+  const parsed = new Date(cleanDate);
+  if (!isNaN(parsed.getTime())) {
+    parsed.setHours(hours, minutes, 0, 0);
+    return parsed.toISOString();
+  }
+
+  // Fallback anchor
+  return "2026-03-12T09:00:00.000Z";
+}
+
 export interface StoredUser {
   id: string;
   email: string;
@@ -86,6 +133,7 @@ export interface StoredEvent {
   poster: string;
   images?: string[]; // Multiple pictures uploaded for the event
   status: "Registration Open" | "Registration Closed";
+  isPrimary?: boolean; // Primary Flagship Event shown on Homepage countdown clock & hero
   rules?: string[];
   eligibility?: string[];
   prizes?: Array<{ rank: string; amount: string }>;
@@ -129,27 +177,8 @@ export interface StoredClub {
   updatedAt: string;
 }
 
-export interface StoredFest {
-  id: string;
-  name: string;
-  edition?: string;
-  tagline?: string;
-  theme?: string;
-  startDate: string; // ISO datetime string e.g. "2026-03-12T09:00:00"
-  endDate: string; // ISO datetime string e.g. "2026-03-15T22:00:00"
-  dateBadge?: string; // e.g. "12–15 March 2026"
-  venue: string; // e.g. "AIIMS Raebareli Main Campus"
-  description?: string;
-  isPrimary: boolean; // Flag driving homepage timer and hero banner
-  status: "upcoming" | "ongoing" | "completed" | "archived";
-  primaryEventId?: string; // Optional: Link to an event if countdown targets a specific event
-  bannerUrl?: string;
-  createdAt: string;
-  updatedAt: string;
-}
-
 export type PersistenceHandler = (
-  collection: "users" | "registrations" | "payments" | "tickets" | "qr_settings" | "events" | "gallery" | "clubs" | "fests",
+  collection: "users" | "registrations" | "payments" | "tickets" | "qr_settings" | "events" | "gallery" | "clubs",
   filter: Record<string, any>,
   data: Record<string, any>,
   action?: "upsert" | "delete"
@@ -164,7 +193,6 @@ class DataStore {
   private events: StoredEvent[] = [];
   private gallery: StoredGalleryItem[] = [];
   private clubs: StoredClub[] = [];
-  private fests: StoredFest[] = [];
   private qrSettings = {
     upiId: "swar.aiims@paytm",
     upiName: "SWAR AIIMS Raebareli",
@@ -193,7 +221,7 @@ class DataStore {
   }
 
   private persist(
-    collection: "users" | "registrations" | "payments" | "tickets" | "qr_settings" | "events" | "gallery" | "clubs" | "fests",
+    collection: "users" | "registrations" | "payments" | "tickets" | "qr_settings" | "events" | "gallery" | "clubs",
     filter: Record<string, any>,
     data: Record<string, any>,
     action: "upsert" | "delete" = "upsert"
@@ -388,26 +416,6 @@ class DataStore {
       },
     ];
 
-    // Scheduled Festival Editions & Primary Timeclock Anchor
-    this.fests = [
-      {
-        id: "fest-affinity-2026",
-        name: "AffinityAIIMS '26",
-        edition: "Annual Inter-Collegiate Cultural Fest",
-        tagline: "Where Healthcare Leaders, Cultural Heritage & Youth Energy Converge",
-        theme: "Parampara – Heritage of Uttar Pradesh",
-        startDate: "2026-03-12T09:00:00",
-        endDate: "2026-03-15T22:00:00",
-        dateBadge: "12–15 March 2026",
-        venue: "AIIMS Raebareli Main Campus",
-        description: "Flagship 4-day inter-collegiate cultural fest celebrating classical Gharanas, collegiate rock bands, dramatics, and sports.",
-        isPrimary: true, // Primary fest driving the homepage live timeclock!
-        status: "upcoming",
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
-      },
-    ];
-
     // Seed Events
     this.events = [
       {
@@ -424,6 +432,7 @@ class DataStore {
         registrationFee: 300,
         teamSize: "1–2 Dancers",
         prizePool: "₹35,000",
+        isPrimary: true, // Primary Flagship Event driving homepage live timeclock and direct registration pass!
         poster: "https://images.unsplash.com/photo-1547153760-18fc86324498?q=80&w=800&auto=format&fit=crop",
         images: [
           "https://images.unsplash.com/photo-1547153760-18fc86324498?q=80&w=800&auto=format&fit=crop",
@@ -893,6 +902,15 @@ class DataStore {
 
   createEvent(event: Omit<StoredEvent, "id" | "createdAt">): StoredEvent {
     const id = event.slug || `ev-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`;
+    // If marked primary, unset primary on all other events
+    if (event.isPrimary) {
+      for (const e of this.events) {
+        if (e.isPrimary) {
+          e.isPrimary = false;
+          this.persist("events", { id: e.id }, e, "upsert");
+        }
+      }
+    }
     const newEvent: StoredEvent = {
       ...event,
       id,
@@ -907,6 +925,14 @@ class DataStore {
   updateEvent(id: string, updates: Partial<StoredEvent>): StoredEvent | undefined {
     const event = this.getEventById(id);
     if (!event) return undefined;
+    if (updates.isPrimary) {
+      for (const e of this.events) {
+        if (e.id !== id && e.isPrimary) {
+          e.isPrimary = false;
+          this.persist("events", { id: e.id }, e, "upsert");
+        }
+      }
+    }
     Object.assign(event, updates);
     this.persist("events", { id }, event, "upsert");
     return event;
@@ -1037,141 +1063,68 @@ class DataStore {
   }
 
   // ==========================================
-  // Fest Scheduling & Homepage Timeclock Sync
+  // Primary Event & Homepage Timeclock Sync
   // ==========================================
-  getAllFests(): StoredFest[] {
-    return this.fests;
-  }
-
-  getFestById(id: string): StoredFest | undefined {
-    return this.fests.find((f) => f.id === id);
-  }
-
-  getPrimaryFest(): StoredFest | undefined {
-    const primary = this.fests.find((f) => f.isPrimary);
+  getPrimaryEvent(): StoredEvent | undefined {
+    const primary = this.events.find((e) => e.isPrimary);
     if (primary) return primary;
-    if (this.fests.length > 0) return this.fests[0];
+    if (this.events.length > 0) return this.events[0];
     return undefined;
   }
 
-  createFest(fest: Omit<StoredFest, "id" | "createdAt" | "updatedAt">): StoredFest {
-    const id = `fest-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`;
-    // If marked primary, unset primary on all other fests
-    if (fest.isPrimary) {
-      for (const f of this.fests) {
-        f.isPrimary = false;
-        this.persist("fests", { id: f.id }, f, "upsert");
+  setPrimaryEvent(id: string): boolean {
+    const event = this.getEventById(id);
+    if (!event) return false;
+    for (const e of this.events) {
+      const isTarget = e.id === id || e.slug === id;
+      if (e.isPrimary !== isTarget) {
+        e.isPrimary = isTarget;
+        this.persist("events", { id: e.id }, e, "upsert");
       }
-    }
-    const newFest: StoredFest = {
-      ...fest,
-      id,
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-    };
-    this.fests.push(newFest);
-    this.persist("fests", { id: newFest.id }, newFest, "upsert");
-    return newFest;
-  }
-
-  updateFest(id: string, updates: Partial<StoredFest>): StoredFest | undefined {
-    const fest = this.getFestById(id);
-    if (!fest) return undefined;
-    if (updates.isPrimary) {
-      for (const f of this.fests) {
-        if (f.id !== id && f.isPrimary) {
-          f.isPrimary = false;
-          this.persist("fests", { id: f.id }, f, "upsert");
-        }
-      }
-    }
-    Object.assign(fest, updates, { updatedAt: new Date().toISOString() });
-    this.persist("fests", { id }, fest, "upsert");
-    return fest;
-  }
-
-  setPrimaryFest(id: string): boolean {
-    const fest = this.getFestById(id);
-    if (!fest) return false;
-    for (const f of this.fests) {
-      f.isPrimary = f.id === id;
-      this.persist("fests", { id: f.id }, f, "upsert");
     }
     return true;
-  }
-
-  deleteFest(id: string): boolean {
-    const idx = this.fests.findIndex((f) => f.id === id);
-    if (idx === -1) return false;
-    const removed = this.fests.splice(idx, 1)[0];
-    this.persist("fests", { id: removed.id }, removed, "delete");
-    // If deleted fest was primary, set another fest as primary if available
-    if (removed.isPrimary && this.fests.length > 0) {
-      this.fests[0].isPrimary = true;
-      this.persist("fests", { id: this.fests[0].id }, this.fests[0], "upsert");
-    }
-    return true;
-  }
-
-  loadFestsFromMongo(fests: StoredFest[]) {
-    for (const f of fests) {
-      const idx = this.fests.findIndex((x) => x.id === f.id);
-      if (idx >= 0) {
-        this.fests[idx] = f;
-      } else {
-        this.fests.push(f);
-      }
-    }
   }
 
   /**
    * Resolves the primary target countdown date and details for the homepage timeclock.
-   * Prioritizes the primary scheduled fest or primary event schedule.
+   * Directly synchronized with the Primary Event designated by Admin.
+   * Under the homepage countdown, the registration CTA directly redirects to that event's registration page.
    */
-  getPrimaryCountdown(): {
+  getPrimaryEventCountdown(): {
+    success: boolean;
+    primaryEvent: StoredEvent;
     targetDate: string;
-    festName: string;
-    edition?: string;
-    tagline?: string;
-    theme?: string;
-    dateBadge?: string;
-    venue?: string;
-    isPrimary: boolean;
+    registrationUrl: string;
+    title: string;
+    venue: string;
+    club?: string;
+    date: string;
+    time: string;
+    prizePool: string;
+    registrationFee: number;
+    category: string;
     status: string;
-    primaryEvent?: StoredEvent;
+    poster: string;
   } {
-    const primaryFest = this.getPrimaryFest();
+    const primaryEvent = this.getPrimaryEvent() || this.events[0];
+    const targetDate = parseEventDateTimeToIso(primaryEvent?.date, primaryEvent?.time);
+    const registrationUrl = primaryEvent ? `/events/${primaryEvent.slug}/register` : "/events";
 
-    let primaryEvent: StoredEvent | undefined = undefined;
-    if (primaryFest?.primaryEventId) {
-      primaryEvent = this.getEventById(primaryFest.primaryEventId);
-    }
-
-    if (primaryFest) {
-      return {
-        targetDate: primaryFest.startDate,
-        festName: primaryFest.name,
-        edition: primaryFest.edition || "Annual Cultural Fest",
-        tagline: primaryFest.tagline || "Where Healthcare Leaders & Cultural Heritage Converge",
-        theme: primaryFest.theme,
-        dateBadge: primaryFest.dateBadge || "12–15 March 2026",
-        venue: primaryFest.venue || "AIIMS Raebareli Main Campus",
-        isPrimary: primaryFest.isPrimary,
-        status: primaryFest.status,
-        primaryEvent,
-      };
-    }
-
-    // Default fallback anchor
     return {
-      targetDate: "2026-03-12T09:00:00",
-      festName: "AffinityAIIMS '26",
-      edition: "Annual Cultural Fest",
-      tagline: "Where Healthcare Leaders & Cultural Heritage Converge",
-      dateBadge: "12–15 March 2026",
-      venue: "AIIMS Raebareli Main Campus",
-      isPrimary: true,
-      status: "upcoming",
+      success: true,
+      primaryEvent,
+      targetDate,
+      registrationUrl,
+      title: primaryEvent?.title || "Kathak Jugalbandi – Classical Dance Confluence",
+      venue: primaryEvent?.venue || "Nawab Wajid Ali Shah Auditorium, AIIMS Raebareli",
+      club: primaryEvent?.club || "Mudra Dance Society",
+      date: primaryEvent?.date || "13 March 2026",
+      time: primaryEvent?.time || "05:00 PM",
+      prizePool: primaryEvent?.prizePool || "₹35,000",
+      registrationFee: primaryEvent?.registrationFee || 300,
+      category: primaryEvent?.category || "Dance & Choreo",
+      status: primaryEvent?.status || "Registration Open",
+      poster: primaryEvent?.poster || "https://images.unsplash.com/photo-1547153760-18fc86324498?q=80&w=800&auto=format&fit=crop",
     };
   }
 

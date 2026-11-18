@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach } from "vitest";
-import { dataStore, StoredClub, StoredFest } from "@/lib/data-store";
+import { dataStore, StoredClub, parseEventDateTimeToIso } from "@/lib/data-store";
 
-describe("Cultural Clubs Creation, Fest Scheduling & Homepage Timer Autosync", () => {
+describe("Cultural Clubs Inline Creation, Primary Event Scheduling & Homepage Timer Autosync", () => {
   beforeEach(() => {
     // Ensure dataStore clean dummy data state
     dataStore.cleanDummyData();
@@ -37,7 +37,6 @@ describe("Cultural Clubs Creation, Fest Scheduling & Homepage Timer Autosync", (
     });
 
     it("should purge dummy records via cleanDummyData() without affecting admin accounts", () => {
-      // Simulate injection of rogue dummy records
       (dataStore as any).registrations.push({
         id: "reg-demo-9999",
         registrationNumber: "REG-2026-9999",
@@ -68,7 +67,7 @@ describe("Cultural Clubs Creation, Fest Scheduling & Homepage Timer Autosync", (
     });
   });
 
-  describe("2. Cultural Clubs Management (CRUD)", () => {
+  describe("2. Cultural Clubs Management (CRUD) & Inline Event Creation", () => {
     it("should list initial official collegiate cultural clubs", () => {
       const clubs = dataStore.getAllClubs();
       expect(clubs.length).toBeGreaterThanOrEqual(7);
@@ -83,7 +82,7 @@ describe("Cultural Clubs Creation, Fest Scheduling & Homepage Timer Autosync", (
       expect(varchasva?.name).toBe("Varchasva Sports Council");
     });
 
-    it("should allow admin to create a new collegiate cultural club", () => {
+    it("should allow admin to create a new collegiate cultural club inline when creating an event", () => {
       const newClub = dataStore.createClub({
         name: "Raag Classical Orchestra",
         slug: "raag-classical-orchestra",
@@ -104,10 +103,25 @@ describe("Cultural Clubs Creation, Fest Scheduling & Homepage Timer Autosync", (
       expect(newClub.id.startsWith("club-")).toBe(true);
       expect(newClub.name).toBe("Raag Classical Orchestra");
 
-      const fetched = dataStore.getClubById(newClub.id);
-      expect(fetched).toBeDefined();
-      expect(fetched?.slug).toBe("raag-classical-orchestra");
-      expect(fetched?.coordinator).toBe("Siddharth Joshi");
+      // Verify club can now be assigned to an event
+      const eventWithClub = dataStore.createEvent({
+        title: "Raag Malhar Jugalbandi Night",
+        slug: "raag-malhar-jugalbandi",
+        category: "Music & Bands",
+        categoryKey: "music",
+        club: newClub.name,
+        description: "Enchanting twilight recital of monsoon ragas.",
+        date: "14 March 2026",
+        time: "06:30 PM",
+        venue: "Saraswati Amphitheatre",
+        registrationFee: 400,
+        teamSize: "1–3 Instrumentalists",
+        prizePool: "₹25,000",
+        poster: "https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?q=80&w=800&auto=format&fit=crop",
+        status: "Registration Open",
+      });
+
+      expect(eventWithClub.club).toBe("Raag Classical Orchestra");
     });
 
     it("should allow admin to update club details", () => {
@@ -149,104 +163,81 @@ describe("Cultural Clubs Creation, Fest Scheduling & Homepage Timer Autosync", (
     });
   });
 
-  describe("3. Fest Scheduling & Homepage Timer Autosync", () => {
-    it("should provide an initial primary scheduled fest that anchors the homepage countdown", () => {
-      const primaryFest = dataStore.getPrimaryFest();
-      expect(primaryFest).toBeDefined();
-      expect(primaryFest?.isPrimary).toBe(true);
-      expect(primaryFest?.startDate).toBeDefined();
+  describe("3. Primary Event Scheduling & Homepage Timer Autosync", () => {
+    it("should correctly parse date and time string formats into valid ISO timestamps", () => {
+      const iso1 = parseEventDateTimeToIso("13 March 2026", "05:00 PM");
+      expect(iso1).toBeDefined();
+      const d1 = new Date(iso1);
+      expect(d1.getFullYear()).toBe(2026);
+      expect(d1.getMonth()).toBe(2); // March is 0-indexed 2
 
-      const countdown = dataStore.getPrimaryCountdown();
-      expect(countdown.isPrimary).toBe(true);
-      expect(countdown.targetDate).toBe(primaryFest?.startDate);
-      expect(countdown.festName).toContain("AffinityAIIMS");
+      const iso2 = parseEventDateTimeToIso("12–15 March 2026", "08:00 AM");
+      const d2 = new Date(iso2);
+      expect(d2.getFullYear()).toBe(2026);
+      expect(d2.getDate()).toBe(12); // First day of range
     });
 
-    it("should allow admin to schedule a new festival edition", () => {
-      const newFest = dataStore.createFest({
-        name: "Rangmanch Spring Fest 2027",
-        edition: "Spring Heritage Edition",
-        tagline: "Celebrating 100 Years of Awadh Culture",
-        theme: "Awadhi Splendor",
-        startDate: "2027-02-20T10:00:00",
-        endDate: "2027-02-23T23:00:00",
-        dateBadge: "20–23 February 2027",
-        venue: "Varanasi Ghats Pavilion",
-        description: "Special springtime cultural gathering with illuminated ghat performances.",
-        isPrimary: false,
-        status: "upcoming",
-      });
+    it("should identify the initial primary event and provide countdown data with direct registrationUrl", () => {
+      const primaryEvent = dataStore.getPrimaryEvent();
+      expect(primaryEvent).toBeDefined();
+      expect(primaryEvent?.isPrimary).toBe(true);
 
-      expect(newFest.id).toBeDefined();
-      expect(newFest.id.startsWith("fest-")).toBe(true);
-      expect(newFest.name).toBe("Rangmanch Spring Fest 2027");
-      expect(newFest.isPrimary).toBe(false);
-
-      const fests = dataStore.getAllFests();
-      expect(fests.some((f) => f.id === newFest.id)).toBe(true);
+      const countdown = dataStore.getPrimaryEventCountdown();
+      expect(countdown.success).toBe(true);
+      expect(countdown.primaryEvent).toBeDefined();
+      expect(countdown.title).toBe(primaryEvent?.title);
+      expect(countdown.registrationUrl).toBe(`/events/${primaryEvent?.slug}/register`);
+      expect(countdown.targetDate).toBeDefined();
     });
 
-    it("should automatically sync homepage timeclock when admin sets a new primary fest", () => {
-      // Current primary countdown
-      const initialCountdown = dataStore.getPrimaryCountdown();
-
-      // Admin schedules an earlier or flagship edition
-      const flagshipFest = dataStore.createFest({
-        name: "AffinityAIIMS Autumn Grand Fest 2026",
-        edition: "Autumn Varsity Invitational",
-        tagline: "Inter-Collegiate Supremacy",
-        startDate: "2026-10-15T09:00:00",
-        endDate: "2026-10-18T22:00:00",
-        dateBadge: "15–18 October 2026",
-        venue: "AIIMS Stadium Turf",
+    it("should automatically sync homepage countdown and registration CTA when admin creates or sets a new primary event", () => {
+      // Create a new flagship event with isPrimary: true
+      const newPrimary = dataStore.createEvent({
+        title: "Grand Battle of Bands 2026",
+        slug: "grand-battle-of-bands-2026",
+        category: "Music & Bands",
+        categoryKey: "music",
+        club: "Dhwani Music Society",
+        description: "The ultimate pan-India battle of collegiate bands.",
+        date: "15 March 2026",
+        time: "07:00 PM",
+        venue: "Main Festival Arena",
+        registrationFee: 1000,
+        teamSize: "3–8 Musicians",
+        prizePool: "₹1,00,000",
+        poster: "https://images.unsplash.com/photo-1470225620780-dba8ba36b745?q=80&w=800&auto=format&fit=crop",
+        status: "Registration Open",
         isPrimary: true, // Mark as primary!
-        status: "upcoming",
       });
 
-      // Verify that the new fest is now primary and the previous one was unset
-      expect(flagshipFest.isPrimary).toBe(true);
-      const activePrimary = dataStore.getPrimaryFest();
-      expect(activePrimary?.id).toBe(flagshipFest.id);
+      // Verify that this event is now primary
+      expect(newPrimary.isPrimary).toBe(true);
 
-      // Verify homepage countdown timer autosynced to the new target date!
-      const updatedCountdown = dataStore.getPrimaryCountdown();
-      expect(updatedCountdown.targetDate).toBe("2026-10-15T09:00:00");
-      expect(updatedCountdown.festName).toBe("AffinityAIIMS Autumn Grand Fest 2026");
-      expect(updatedCountdown.dateBadge).toBe("15–18 October 2026");
-      expect(updatedCountdown.targetDate).not.toBe(initialCountdown.targetDate);
+      const activePrimary = dataStore.getPrimaryEvent();
+      expect(activePrimary?.id).toBe(newPrimary.id);
+
+      // Verify countdown details are synchronized
+      const countdown = dataStore.getPrimaryEventCountdown();
+      expect(countdown.title).toBe("Grand Battle of Bands 2026");
+      expect(countdown.registrationUrl).toBe("/events/grand-battle-of-bands-2026/register");
+      expect(countdown.prizePool).toBe("₹1,00,000");
+
+      // Verify other events no longer have isPrimary: true
+      const previousPrimary = dataStore.getEventById("kathak-jugalbandi");
+      expect(previousPrimary?.isPrimary).toBe(false);
     });
 
-    it("should allow explicitly toggling primary fest with setPrimaryFest()", () => {
-      const fests = dataStore.getAllFests();
-      expect(fests.length).toBeGreaterThanOrEqual(2);
-
-      const targetFest = fests[0];
-      const success = dataStore.setPrimaryFest(targetFest.id);
+    it("should allow explicitly toggling primary event via setPrimaryEvent()", () => {
+      const success = dataStore.setPrimaryEvent("kathak-jugalbandi");
       expect(success).toBe(true);
 
-      const activePrimary = dataStore.getPrimaryFest();
-      expect(activePrimary?.id).toBe(targetFest.id);
+      const activePrimary = dataStore.getPrimaryEvent();
+      expect(activePrimary?.slug).toBe("kathak-jugalbandi");
+      expect(activePrimary?.isPrimary).toBe(true);
 
-      const countdown = dataStore.getPrimaryCountdown();
-      expect(countdown.targetDate).toBe(targetFest.startDate);
-      expect(countdown.festName).toBe(targetFest.name);
-    });
-
-    it("should allow editing fest start date and immediately reflect in homepage countdown clock", () => {
-      const primary = dataStore.getPrimaryFest()!;
-      const newDate = "2026-04-05T08:30:00";
-
-      const updated = dataStore.updateFest(primary.id, {
-        startDate: newDate,
-        dateBadge: "5–8 April 2026",
-      });
-
-      expect(updated?.startDate).toBe(newDate);
-
-      // Verify timeclock autosyncs with updated start date
-      const countdown = dataStore.getPrimaryCountdown();
-      expect(countdown.targetDate).toBe(newDate);
-      expect(countdown.dateBadge).toBe("5–8 April 2026");
+      const countdown = dataStore.getPrimaryEventCountdown();
+      expect(countdown.registrationUrl).toBe("/events/kathak-jugalbandi/register");
+      expect(countdown.title).toContain("Kathak Jugalbandi");
     });
   });
 });

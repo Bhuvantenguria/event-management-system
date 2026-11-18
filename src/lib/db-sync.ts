@@ -7,7 +7,6 @@ import {
   StoredEvent,
   StoredGalleryItem,
   StoredClub,
-  StoredFest,
 } from "./data-store";
 import {
   getDatabase,
@@ -19,7 +18,6 @@ import {
   getGalleryCollection,
   getQrSettingsCollection,
   getClubsCollection,
-  getFestsCollection,
   ensureMongoIndexes,
 } from "./mongodb";
 
@@ -232,19 +230,6 @@ export async function syncWithMongo(force = false): Promise<void> {
       } else {
         for (const club of dataStore.getAllClubs()) {
           await clubsCol.updateOne({ id: club.id }, { $set: club }, { upsert: true });
-        }
-      }
-    }
-
-    // 9. Sync Scheduled Fests
-    const festsCol = await getFestsCollection();
-    if (festsCol) {
-      const dbFests = (await festsCol.find({}, { projection: { _id: 0 } }).toArray()) as unknown as StoredFest[];
-      if (dbFests.length > 0) {
-        dataStore.loadFestsFromMongo(dbFests);
-      } else {
-        for (const fest of dataStore.getAllFests()) {
-          await festsCol.updateOne({ id: fest.id }, { $set: fest }, { upsert: true });
         }
       }
     }

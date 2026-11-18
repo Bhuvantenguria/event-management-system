@@ -20,6 +20,8 @@ import {
   Tag,
   Trophy,
   Users,
+  Star,
+  Building2,
 } from "lucide-react";
 import { formatCurrency } from "@/lib/utils";
 
@@ -42,6 +44,16 @@ export default function AdminEventsPage() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingEventId, setEditingEventId] = useState<string | null>(null);
 
+  // Club Selection Mode: Choose Existing Club vs Register New Club Inline
+  const [clubMode, setClubMode] = useState<"existing" | "new">("existing");
+  const [newClubData, setNewClubData] = useState({
+    name: "",
+    category: "Dance & Performing Arts",
+    motto: "",
+    coordinator: "",
+    coordinatorPhone: "",
+  });
+
   // Form State
   const [formData, setFormData] = useState({
     title: "",
@@ -59,6 +71,7 @@ export default function AdminEventsPage() {
     poster: "https://images.unsplash.com/photo-1547153760-18fc86324498?q=80&w=800&auto=format&fit=crop",
     images: [] as string[],
     status: "Registration Open" as "Registration Open" | "Registration Closed",
+    isPrimary: false,
     rules: "Valid student ID required\nReporting time: 30 mins before schedule",
   });
 
@@ -97,12 +110,20 @@ export default function AdminEventsPage() {
 
   const openCreateModal = () => {
     setEditingEventId(null);
+    setClubMode("existing");
+    setNewClubData({
+      name: "",
+      category: "Dance & Performing Arts",
+      motto: "",
+      coordinator: "",
+      coordinatorPhone: "",
+    });
     setFormData({
       title: "",
       slug: "",
       category: "Cultural & Performing Arts",
       categoryKey: "cultural",
-      club: "University Cultural Council",
+      club: availableClubs.length > 0 ? availableClubs[0].name : "Mudra Dance Society",
       description: "",
       date: "13 March 2026",
       time: "10:00 AM",
@@ -115,6 +136,7 @@ export default function AdminEventsPage() {
         "https://images.unsplash.com/photo-1547153760-18fc86324498?q=80&w=800&auto=format&fit=crop",
       ],
       status: "Registration Open",
+      isPrimary: false,
       rules: "Valid student ID required\nReporting time: 30 mins before schedule",
     });
     setUploadError("");
@@ -123,12 +145,20 @@ export default function AdminEventsPage() {
 
   const openEditModal = (event: StoredEvent) => {
     setEditingEventId(event.id);
+    setClubMode("existing");
+    setNewClubData({
+      name: "",
+      category: event.category || "Dance & Performing Arts",
+      motto: "",
+      coordinator: "",
+      coordinatorPhone: "",
+    });
     setFormData({
       title: event.title,
       slug: event.slug,
       category: event.category,
       categoryKey: event.categoryKey || "cultural",
-      club: event.club || "University Cultural Council",
+      club: event.club || "Mudra Dance Society",
       description: event.description,
       date: event.date,
       time: event.time,
@@ -139,6 +169,7 @@ export default function AdminEventsPage() {
       poster: event.poster,
       images: event.images && event.images.length > 0 ? [...event.images] : [event.poster],
       status: event.status,
+      isPrimary: !!event.isPrimary,
       rules: event.rules ? event.rules.join("\n") : "",
     });
     setUploadError("");
@@ -240,6 +271,27 @@ export default function AdminEventsPage() {
     }));
   };
 
+  const handleSetPrimaryEvent = async (id: string) => {
+    try {
+      const res = await fetch("/api/events/primary", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ eventId: id }),
+      });
+      const data = await res.json();
+      if (res.ok && data.success) {
+        dataStore.setPrimaryEvent(id);
+        await loadEvents();
+        setSaveSuccess(true);
+        setTimeout(() => setSaveSuccess(false), 3000);
+      }
+    } catch (err: any) {
+      console.warn("API set primary event notice:", err?.message);
+      dataStore.setPrimaryEvent(id);
+      loadEvents();
+    }
+  };
+
   const handleSaveEvent = async (e: React.FormEvent) => {
     e.preventDefault();
     const slug = formData.slug.trim() || formData.title.toLowerCase().replace(/[^a-z0-9]+/g, "-");
@@ -251,12 +303,40 @@ export default function AdminEventsPage() {
     const imagesToSave = formData.images.length > 0 ? formData.images : [formData.poster];
     const posterToSave = formData.poster || imagesToSave[0];
 
+    // Inline Club Creation: If registering a new club inline, create it via /api/clubs first
+    let assignedClub = formData.club;
+    if (clubMode === "new" && newClubData.name.trim()) {
+      try {
+        const clubRes = await fetch("/api/clubs", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            name: newClubData.name.trim(),
+            category: newClubData.category || formData.category,
+            motto: newClubData.motto,
+            coordinator: newClubData.coordinator,
+            coordinatorPhone: newClubData.coordinatorPhone,
+          }),
+        });
+        const clubResult = await clubRes.json();
+        if (clubRes.ok && clubResult.club) {
+          assignedClub = clubResult.club.name;
+          setAvailableClubs((prev) => [...prev, clubResult.club]);
+        } else {
+          assignedClub = newClubData.name.trim();
+        }
+      } catch (err) {
+        console.warn("Inline club creation fallback:", err);
+        assignedClub = newClubData.name.trim();
+      }
+    }
+
     const eventPayload = {
       title: formData.title,
       slug,
       category: formData.category,
       categoryKey: formData.categoryKey,
-      club: formData.club,
+      club: assignedClub,
       description: formData.description,
       date: formData.date,
       time: formData.time,
@@ -267,6 +347,7 @@ export default function AdminEventsPage() {
       poster: posterToSave,
       images: imagesToSave,
       status: formData.status,
+      isPrimary: formData.isPrimary,
       rules: rulesList,
     };
 
@@ -294,6 +375,12 @@ export default function AdminEventsPage() {
         console.warn("API event create notice:", err?.message);
       }
       dataStore.createEvent(eventPayload);
+    }
+
+    // If marked primary, ensure primary countdown is updated
+    if (formData.isPrimary) {
+      const targetId = editingEventId || slug;
+      await handleSetPrimaryEvent(targetId);
     }
 
     setIsModalOpen(false);
@@ -460,6 +547,12 @@ export default function AdminEventsPage() {
                           )}
                         </div>
                         <div>
+                          {ev.isPrimary && (
+                            <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[9px] font-bold bg-fest-gold/20 text-fest-gold border border-fest-gold/40 mb-1">
+                              <Star className="w-2.5 h-2.5 mr-1 fill-fest-gold text-fest-gold" />
+                              Primary Event (Homepage Timer)
+                            </span>
+                          )}
                           <p className="font-serif text-sm font-bold text-foreground hover:text-fest-sunset transition-colors">
                             {ev.title}
                           </p>
@@ -514,7 +607,22 @@ export default function AdminEventsPage() {
 
                     {/* Action buttons */}
                     <td className="py-3.5 px-4 text-right">
-                      <div className="flex items-center justify-end space-x-2">
+                      <div className="flex items-center justify-end space-x-1.5">
+                        <button
+                          onClick={() => handleSetPrimaryEvent(ev.id)}
+                          className={`p-1.5 rounded-lg border transition-all ${
+                            ev.isPrimary
+                              ? "bg-fest-gold text-fest-charcoal border-fest-gold shadow-sm font-bold"
+                              : "border-fest-gold/40 hover:bg-fest-gold/15 text-fest-gold"
+                          }`}
+                          title={
+                            ev.isPrimary
+                              ? "Primary Event for Homepage Timer & Direct Pass"
+                              : "Set as Primary Event (Show on Homepage Countdown)"
+                          }
+                        >
+                          <Star className={`w-3.5 h-3.5 ${ev.isPrimary ? "fill-fest-charcoal" : ""}`} />
+                        </button>
                         <button
                           onClick={() => handleToggleStatus(ev.id)}
                           className="px-2 py-1 rounded text-[11px] font-semibold border border-border hover:bg-fest-champagne/30 text-foreground"
@@ -621,20 +729,93 @@ export default function AdminEventsPage() {
                 </div>
 
                 <div>
-                  <label className="font-bold block mb-1 text-foreground">Host College Club</label>
-                  <input
-                    type="text"
-                    list="clubs-datalist"
-                    placeholder="e.g. Mudra Dance Society"
-                    value={formData.club}
-                    onChange={(e) => setFormData({ ...formData, club: e.target.value })}
-                    className="w-full px-3 py-2 rounded-xl bg-background border border-border text-foreground focus:outline-none focus:ring-2 focus:ring-fest-sunset"
-                  />
-                  <datalist id="clubs-datalist">
-                    {availableClubs.map((c) => (
-                      <option key={c.id} value={c.name} />
-                    ))}
-                  </datalist>
+                  <div className="flex items-center justify-between mb-1.5">
+                    <label className="font-bold text-foreground">Host College Club *</label>
+                    <div className="flex rounded-lg border border-border overflow-hidden text-[10px]">
+                      <button
+                        type="button"
+                        onClick={() => setClubMode("existing")}
+                        className={`px-2 py-0.5 font-semibold transition-colors ${
+                          clubMode === "existing"
+                            ? "bg-fest-sunset text-white"
+                            : "bg-background text-muted-foreground hover:text-foreground"
+                        }`}
+                      >
+                        Choose Existing
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setClubMode("new")}
+                        className={`px-2 py-0.5 font-semibold transition-colors ${
+                          clubMode === "new"
+                            ? "bg-fest-sunset text-white"
+                            : "bg-background text-muted-foreground hover:text-foreground"
+                        }`}
+                      >
+                        + Register New Club
+                      </button>
+                    </div>
+                  </div>
+
+                  {clubMode === "existing" ? (
+                    <div>
+                      <select
+                        value={formData.club}
+                        onChange={(e) => setFormData({ ...formData, club: e.target.value })}
+                        className="w-full px-3 py-2 rounded-xl bg-background border border-border text-foreground focus:outline-none focus:ring-2 focus:ring-fest-sunset"
+                      >
+                        <option value="Festival Central Secretariat">Festival Central Secretariat</option>
+                        {availableClubs.map((c) => (
+                          <option key={c.id} value={c.name}>
+                            {c.name}
+                          </option>
+                        ))}
+                      </select>
+                      <span className="text-[10px] text-muted-foreground mt-0.5 block">
+                        Select an existing collegiate society or toggle above to register a new club inline.
+                      </span>
+                    </div>
+                  ) : (
+                    <div className="p-3 rounded-xl bg-fest-plum/20 border border-fest-gold/40 space-y-2.5 animate-fade-in">
+                      <div className="flex items-center space-x-1.5 text-fest-gold font-bold text-[11px]">
+                        <Building2 className="w-3.5 h-3.5" />
+                        <span>Register New Collegiate Society (Created on Event Save)</span>
+                      </div>
+                      <div>
+                        <label className="font-semibold text-[10px] block text-foreground">New Club Name *</label>
+                        <input
+                          type="text"
+                          required={clubMode === "new"}
+                          placeholder="e.g. Swaranjali Classical Music Guild"
+                          value={newClubData.name}
+                          onChange={(e) => setNewClubData({ ...newClubData, name: e.target.value })}
+                          className="w-full px-2.5 py-1.5 rounded-lg bg-background border border-border text-foreground text-xs focus:outline-none focus:ring-1 focus:ring-fest-sunset"
+                        />
+                      </div>
+                      <div className="grid grid-cols-2 gap-2">
+                        <div>
+                          <label className="font-semibold text-[10px] block text-foreground">Club Motto / Tagline</label>
+                          <input
+                            type="text"
+                            placeholder="e.g. Echoes of Heritage"
+                            value={newClubData.motto}
+                            onChange={(e) => setNewClubData({ ...newClubData, motto: e.target.value })}
+                            className="w-full px-2.5 py-1.5 rounded-lg bg-background border border-border text-foreground text-xs focus:outline-none focus:ring-1 focus:ring-fest-sunset"
+                          />
+                        </div>
+                        <div>
+                          <label className="font-semibold text-[10px] block text-foreground">Coordinator Name</label>
+                          <input
+                            type="text"
+                            placeholder="e.g. Rohan Varma"
+                            value={newClubData.coordinator}
+                            onChange={(e) => setNewClubData({ ...newClubData, coordinator: e.target.value })}
+                            className="w-full px-2.5 py-1.5 rounded-lg bg-background border border-border text-foreground text-xs focus:outline-none focus:ring-1 focus:ring-fest-sunset"
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  )}
                 </div>
               </div>
 
@@ -886,6 +1067,26 @@ export default function AdminEventsPage() {
                     <span className="text-foreground">Registration Closed</span>
                   </label>
                 </div>
+              </div>
+
+              {/* Primary Flagship Event Toggle */}
+              <div className="p-3.5 rounded-xl bg-fest-gold/10 border border-fest-gold/40 flex items-start space-x-3">
+                <input
+                  type="checkbox"
+                  id="isPrimaryCheckbox"
+                  checked={formData.isPrimary}
+                  onChange={(e) => setFormData({ ...formData, isPrimary: e.target.checked })}
+                  className="mt-0.5 rounded text-fest-sunset focus:ring-fest-sunset h-4 w-4"
+                />
+                <label htmlFor="isPrimaryCheckbox" className="cursor-pointer">
+                  <span className="font-bold text-fest-gold-light flex items-center space-x-1 text-xs">
+                    <Star className="w-3.5 h-3.5 fill-fest-gold text-fest-gold inline mr-1" />
+                    Mark as Primary Event (Syncs with Homepage Countdown &amp; Hero Pass)
+                  </span>
+                  <span className="block text-[11px] text-muted-foreground mt-0.5 leading-snug">
+                    When enabled, this event's schedule drives the homepage hero live countdown timer, and clicking the hero registration pass navigates directly to this event&apos;s registration page.
+                  </span>
+                </label>
               </div>
 
               {/* Footer Buttons */}

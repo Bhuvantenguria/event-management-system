@@ -10,7 +10,6 @@ import {
   getGalleryCollection,
   getQrSettingsCollection,
   getClubsCollection,
-  getFestsCollection,
   ensureMongoIndexes,
 } from "./mongodb";
 import { dataStore } from "./data-store";
@@ -127,22 +126,6 @@ async function main() {
       console.log(`✅ Seeded ${defaultClubs.length} collegiate cultural clubs.`);
     } else {
       console.log(`ℹ️ Clubs collection already has ${existingClubsCount} records. Skipping clubs seeding.`);
-    }
-  }
-
-  // 7. Seed Scheduled Fests & Primary Timeclock Anchor
-  const festsCol = await getFestsCollection();
-  if (festsCol) {
-    const existingFestsCount = await festsCol.countDocuments();
-    if (existingFestsCount === 0) {
-      console.log("🌱 Seeding initial primary scheduled festival edition...");
-      const defaultFests = dataStore.getAllFests();
-      for (const fest of defaultFests) {
-        await festsCol.updateOne({ id: fest.id }, { $set: fest }, { upsert: true });
-      }
-      console.log(`✅ Seeded ${defaultFests.length} scheduled festival editions.`);
-    } else {
-      console.log(`ℹ️ Fests collection already has ${existingFestsCount} records. Skipping fests seeding.`);
     }
   }
 
