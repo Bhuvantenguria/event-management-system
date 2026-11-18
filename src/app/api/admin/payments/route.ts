@@ -76,33 +76,37 @@ export async function POST(request: Request) {
     // Ensure all changes (payment, registration, ticket) are flushed to MongoDB Atlas
     await dataStore.flushPending();
 
-    // Trigger Nodemailer notifications
+    // Trigger Nodemailer notifications (awaited for serverless reliability)
     if (reg) {
-      if (action === "approve") {
-        const ticket = dataStore.getTicketByRegistrationId(reg.id);
-        if (ticket) {
-          sendPaymentApprovalEmail(
+      try {
+        if (action === "approve") {
+          const ticket = dataStore.getTicketByRegistrationId(reg.id);
+          if (ticket) {
+            await sendPaymentApprovalEmail(
+              reg.userEmail,
+              reg.userName,
+              reg.eventTitle,
+              ticket.ticketNumber,
+              ticket.qrToken
+            );
+          }
+        } else if (action === "resubmit") {
+          await sendPaymentResubmitEmail(
             reg.userEmail,
             reg.userName,
             reg.eventTitle,
-            ticket.ticketNumber,
-            ticket.qrToken
-          ).catch((err) => console.warn("Payment approval email notice:", err?.message || err));
+            rejectionReason || "Please upload a clearer receipt screenshot showing the 12-digit UTR."
+          );
+        } else if (action === "reject") {
+          await sendPaymentRejectionEmail(
+            reg.userEmail,
+            reg.userName,
+            reg.eventTitle,
+            rejectionReason || "Verification criteria not met. Please review submission details."
+          );
         }
-      } else if (action === "resubmit") {
-        sendPaymentResubmitEmail(
-          reg.userEmail,
-          reg.userName,
-          reg.eventTitle,
-          rejectionReason || "Please upload a clearer receipt screenshot showing the 12-digit UTR."
-        ).catch((err) => console.warn("Payment resubmission email notice:", err?.message || err));
-      } else if (action === "reject") {
-        sendPaymentRejectionEmail(
-          reg.userEmail,
-          reg.userName,
-          reg.eventTitle,
-          rejectionReason || "Verification criteria not met. Please review submission details."
-        ).catch((err) => console.warn("Payment rejection email notice:", err?.message || err));
+      } catch (emailErr: any) {
+        console.warn("Payment review notification notice:", emailErr?.message || emailErr);
       }
     }
 

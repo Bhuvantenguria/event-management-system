@@ -73,22 +73,24 @@ export async function POST(request: Request) {
     // Flush registration & optional ticket to MongoDB Atlas
     await dataStore.flushPending();
 
-    // Trigger non-blocking transactional confirmation email
-    sendRegistrationConfirmationEmail(
-      userEmail,
-      userName,
-      eventTitle,
-      isFree,
-      amount || 0,
-      {
-        participationType,
-        teamName,
-        ticketNumber: issuedTicket?.ticketNumber,
-        qrToken: issuedTicket?.qrToken,
-      }
-    ).catch((err) => {
+    // Trigger transactional confirmation email (awaited so serverless execution completes cleanly)
+    try {
+      await sendRegistrationConfirmationEmail(
+        userEmail,
+        userName,
+        eventTitle,
+        isFree,
+        amount || 0,
+        {
+          participationType,
+          teamName,
+          ticketNumber: issuedTicket?.ticketNumber,
+          qrToken: issuedTicket?.qrToken,
+        }
+      );
+    } catch (err: any) {
       console.warn("Registration email dispatch notice:", err?.message || err);
-    });
+    }
 
     return NextResponse.json({
       success: true,

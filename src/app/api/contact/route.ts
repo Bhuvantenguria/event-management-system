@@ -13,15 +13,17 @@ export async function POST(request: Request) {
       );
     }
 
-    sendContactInquiryNotification(
-      name.trim(),
-      email.trim(),
-      college || "",
-      subject || "General Inquiry",
-      message.trim()
-    ).catch((err) => {
+    try {
+      await sendContactInquiryNotification(
+        name.trim(),
+        email.trim(),
+        college || "",
+        subject || "General Inquiry",
+        message.trim()
+      );
+    } catch (err: any) {
       console.warn("Contact inquiry email dispatch notice:", err?.message || err);
-    });
+    }
 
     return NextResponse.json({
       success: true,

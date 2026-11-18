@@ -127,7 +127,14 @@ export function createTransporter() {
     const refreshToken = cleanEnv(process.env.GOOGLE_REFRESH_TOKEN);
 
     return nodemailer.createTransport({
-      service: "gmail",
+      host: "smtp.gmail.com",
+      port: 465,
+      secure: true,
+      family: 4, // Explicitly force IPv4 to prevent hanging on AWS Lambda / Vercel IPv6
+      connectionTimeout: 20000,
+      greetingTimeout: 20000,
+      socketTimeout: 20000,
+      pool: false,
       auth: {
         type: "OAuth2",
         user,
@@ -135,7 +142,11 @@ export function createTransporter() {
         clientSecret,
         refreshToken,
       },
-    });
+      tls: {
+        rejectUnauthorized: false,
+        minVersion: "TLSv1.2",
+      },
+    } as any);
   }
 
   // 2. Google App Password / SMTP Transport
@@ -146,26 +157,6 @@ export function createTransporter() {
   const rawHost = cleanEnv(process.env.SMTP_HOST) || "smtp.gmail.com";
   const port = parseInt(cleanEnv(process.env.SMTP_PORT) || "465", 10);
 
-  const isGmail =
-    rawHost.toLowerCase().includes("gmail") ||
-    process.env.SMTP_SERVICE?.toLowerCase() === "gmail" ||
-    user.toLowerCase().endsWith("@gmail.com");
-
-  // For Gmail on default port 465, Nodemailer's native service configuration is optimal
-  if (isGmail && (!process.env.SMTP_PORT || port === 465)) {
-    return nodemailer.createTransport({
-      service: "gmail",
-      auth: {
-        user,
-        pass,
-      },
-      tls: {
-        rejectUnauthorized: false,
-      },
-    });
-  }
-
-  // Handle port 587 vs 465
   const isPort465 = port === 465;
   const secure =
     process.env.SMTP_SECURE !== undefined
@@ -176,14 +167,21 @@ export function createTransporter() {
     host: rawHost,
     port,
     secure,
+    requireTLS: !secure && port === 587,
+    family: 4, // Explicitly force IPv4 on serverless to avoid IPv6 routing blackholes
+    connectionTimeout: 20000,
+    greetingTimeout: 20000,
+    socketTimeout: 20000,
+    pool: false, // Serverless best practice: avoid reusing frozen sockets
     auth: {
       user,
       pass,
     },
     tls: {
       rejectUnauthorized: false,
+      minVersion: "TLSv1.2",
     },
-  });
+  } as any);
 }
 
 /**
@@ -248,6 +246,8 @@ export async function verifySmtpConnection(): Promise<{
       userFriendlyMessage = `Google SMTP Authentication Rejected (535-5.7.8): Google accounts require a 16-character Google App Password (not your regular personal password). Alternatively, set up Google OAuth2 with GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET, and GOOGLE_REFRESH_TOKEN.`;
     } else if (errorMsg.includes("invalid_grant") || errorMsg.includes("Token has been expired or revoked")) {
       userFriendlyMessage = `Google OAuth2 Token Expired or Revoked (invalid_grant): The GOOGLE_REFRESH_TOKEN is invalid or expired. In Google Cloud testing mode, refresh tokens expire every 7 days. Please regenerate a refresh token or set the OAuth consent screen to In Production.`;
+    } else if (errorMsg.includes("Greeting never received") || errorMsg.includes("ETIMEDOUT")) {
+      userFriendlyMessage = `SMTP Connection Timeout (Greeting never received): The connection to smtp.gmail.com timed out during the greeting handshake. On Vercel, this usually happens when IPv6 routing hangs or when serverless functions exit prematurely. We have enforced IPv4 with extended timeouts. If using Port 465, you can also test Port 587 with SMTP_SECURE=false.`;
     }
 
     return {

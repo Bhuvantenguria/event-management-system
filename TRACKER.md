@@ -684,6 +684,46 @@
   - Updated `src/__tests__/clubs-and-fests-management.test.ts` to test primary event countdown autosync, ISO timestamp parsing, direct registration URL, and inline club creation during event creation.
   - `npm run build`: Production Next.js build compiled successfully for all 46 static and dynamic routes.
 
+---
+
+### Phase 22: Serverless SMTP Handshake Hardening ("Greeting never received"), IPv4 Enforcement & Email Promise Await Resolution
+- **Status**: Completed
+- **Why**:
+  1. The user shared live Vercel production logs showing:
+     `[Email Failed] Delivery failure for 'password_reset' to bhuvantenguria37@gmail.com: Greeting never received`
+     and `[Email Notice] EMAIL_FROM (Rangmanch UP Cultural Fest <fest.cultural.up@gmail.com>) uses a different Gmail address than authenticated user (aiimsrblswar@gmail.com)`.
+  2. The user also indicated: *"I'm using aiimssupoort@gmail.com mail for sending these mails"*.
+- **Root Cause Analysis**:
+  1. *Premature Serverless Container Freeze (Un-awaited Promises)*:
+     - In `/api/auth/forgot-password`, `/api/auth/register`, `/api/contact`, `/api/events/register`, `/api/payments/submit`, and `/api/admin/payments`, email functions (e.g. `sendPasswordResetEmail(...)`) were called as floating promises without `await`.
+     - In serverless runtimes like Vercel (AWS Lambda), as soon as `return NextResponse.json(...)` is reached, the Lambda container immediately freezes. Any in-flight TCP/TLS socket to Google's SMTP server is severed before Google can send the `220 smtp.gmail.com ESMTP` greeting banner, producing `Error: Greeting never received`.
+  2. *IPv6 Network Blackholing on Cloud Infrastructure*:
+     - `smtp.gmail.com` publishes both IPv4 and IPv6 DNS records. By default, Node.js `net.Socket` attempts IPv6 resolution first if available.
+     - AWS Lambda / Vercel serverless VPCs frequently lack IPv6 internet gateways, causing TCP connections to the IPv6 address to hang until the greeting timeout expires.
+  3. *Vercel Environment Variable Mismatch*:
+     - The user's Vercel production environment variables were still set to `SMTP_USER="aiimsrblswar@gmail.com"` and `EMAIL_FROM="Rangmanch UP Cultural Fest <fest.cultural.up@gmail.com>"`.
+     - The user stated they are now using `aiimssupoort@gmail.com` (or `aiimssupport@gmail.com`). If an App Password was generated for that new account while Vercel was authenticating as the old account, authentication would fail or mismatch.
+- **Key Technical Implementations**:
+  1. **Strict Promise Awaiting Across All Transactional API Routes**:
+     - `src/app/api/auth/forgot-password/route.ts`: Converted `sendPasswordResetEmail()` to a properly `await`ed call inside a `try/catch` block.
+     - `src/app/api/auth/register/route.ts`: `await sendWelcomeEmail(...)`.
+     - `src/app/api/contact/route.ts`: `await sendContactInquiryNotification(...)`.
+     - `src/app/api/events/register/route.ts`: `await sendRegistrationConfirmationEmail(...)`.
+     - `src/app/api/payments/submit/route.ts`: `await sendPaymentSubmittedEmail(...)`.
+     - `src/app/api/admin/payments/route.ts`: `await` approval, resubmission, and rejection notifications.
+     - This guarantees the serverless runtime stays active until the SMTP exchange is finalized.
+  2. **IPv4 Enforcement & Extended Serverless Timeouts (`src/lib/email/index.ts`)**:
+     - Added `family: 4` to force IPv4 socket connections, bypassing AWS Lambda/Vercel IPv6 routing blackholes.
+     - Configured `connectionTimeout: 20000`, `greetingTimeout: 20000`, and `socketTimeout: 20000` (20 seconds).
+     - Configured `pool: false` to ensure serverless instances do not reuse frozen or stale sockets.
+     - Added `requireTLS: true` when connecting via port 587.
+     - Enhanced error reporting in `verifySmtpConnection()` with actionable troubleshooting for `Greeting never received`.
+- **Verification & Testing Results**:
+  - `npx tsc --noEmit`: 0 TypeScript errors.
+  - `npm test`: **70/70 tests passing** across all 10 test suites (100% pass rate).
+  - `npm run build`: Production Next.js build compiled successfully for all 46 routes.
+
+
 
 
 

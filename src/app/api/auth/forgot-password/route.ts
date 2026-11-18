@@ -27,9 +27,11 @@ export async function POST(request: Request) {
       const baseUrl = getBaseUrl();
       const resetUrl = `${baseUrl}/login?resetToken=${resetToken}&email=${encodeURIComponent(cleanEmail)}`;
 
-      sendPasswordResetEmail(cleanEmail, resetUrl).catch((err) => {
+      try {
+        await sendPasswordResetEmail(cleanEmail, resetUrl);
+      } catch (err: any) {
         console.warn("Password reset email dispatch notice:", err?.message || err);
-      });
+      }
     }
 
     // Always return success for security (prevents email enumeration attacks)

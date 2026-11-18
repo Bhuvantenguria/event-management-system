@@ -48,10 +48,12 @@ export async function POST(request: Request) {
     // Ensure write is flushed to MongoDB Atlas
     await dataStore.flushPending();
 
-    // Trigger welcome notification via Nodemailer (non-blocking)
-    sendWelcomeEmail(newUser.email, newUser.name).catch((err) => {
+    // Trigger welcome notification via Nodemailer (awaited so serverless execution context does not terminate prematurely)
+    try {
+      await sendWelcomeEmail(newUser.email, newUser.name);
+    } catch (err: any) {
       console.warn("Welcome email dispatch notice:", err?.message || err);
-    });
+    }
 
     return NextResponse.json(
       {
