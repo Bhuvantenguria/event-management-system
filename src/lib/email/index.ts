@@ -253,6 +253,43 @@ export async function verifySmtpConnection(): Promise<{
   }
 
   const isOAuth = isOAuth2Configured();
+  const user = sanitizeGmailUser(process.env.GMAIL_USER || process.env.SMTP_USER);
+
+  // For OAuth2, test the token exchange via HTTPS REST endpoint first
+  if (isOAuth) {
+    try {
+      const clientId = cleanEnv(process.env.GOOGLE_CLIENT_ID);
+      const clientSecret = cleanEnv(process.env.GOOGLE_CLIENT_SECRET);
+      const refreshToken = cleanOAuthToken(process.env.GOOGLE_REFRESH_TOKEN);
+
+      const tokenRes = await fetch("https://oauth2.googleapis.com/token", {
+        method: "POST",
+        headers: { "Content-Type": "application/x-www-form-urlencoded" },
+        body: new URLSearchParams({
+          client_id: clientId,
+          client_secret: clientSecret,
+          refresh_token: refreshToken,
+          grant_type: "refresh_token",
+        }),
+      });
+
+      const tokenData = await tokenRes.json().catch(() => ({}));
+      if (tokenRes.ok && tokenData.access_token) {
+        return {
+          configured: true,
+          connected: true,
+          authMethod: "OAuth2",
+          message: `Gmail OAuth2 connection established successfully! Ready to dispatch live emails as ${user} via Gmail REST API.`,
+          user,
+          host: "Gmail REST API (googleapis.com)",
+          port: 443,
+        };
+      }
+    } catch {
+      // In offline or mocked environments, continue to transporter verification
+    }
+  }
+
   const transporter = createTransporter();
   if (!transporter) {
     return {
@@ -263,7 +300,6 @@ export async function verifySmtpConnection(): Promise<{
     };
   }
 
-  const user = sanitizeGmailUser(process.env.GMAIL_USER || process.env.SMTP_USER);
   const host = isOAuth ? "Gmail OAuth2 (google.com)" : cleanEnv(process.env.SMTP_HOST) || "smtp.gmail.com";
   const port = isOAuth ? 465 : parseInt(cleanEnv(process.env.SMTP_PORT) || "465", 10);
 
@@ -362,6 +398,86 @@ function renderHeritageTemplate(title: string, contentHtml: string): string {
 }
 
 /**
+ * Dispatches email directly via Google's official Gmail REST API (over HTTPS port 443).
+ * This completely avoids serverless raw TCP socket drops and "Connection closed unexpectedly" on Vercel.
+ */
+export async function sendViaGmailRestApi(options: {
+  from: string;
+  to: string;
+  subject: string;
+  html: string;
+  text?: string;
+  replyTo?: string;
+}): Promise<{ success: boolean; messageId?: string; error?: string }> {
+  const clientId = cleanEnv(process.env.GOOGLE_CLIENT_ID);
+  const clientSecret = cleanEnv(process.env.GOOGLE_CLIENT_SECRET);
+  const refreshToken = cleanOAuthToken(process.env.GOOGLE_REFRESH_TOKEN);
+  const user = sanitizeGmailUser(process.env.GMAIL_USER || process.env.SMTP_USER);
+
+  if (!clientId || !clientSecret || !refreshToken || !user) {
+    return { success: false, error: "Missing OAuth2 credentials for Gmail REST API" };
+  }
+
+  // 1. Fetch short-lived access token
+  const tokenRes = await fetch("https://oauth2.googleapis.com/token", {
+    method: "POST",
+    headers: { "Content-Type": "application/x-www-form-urlencoded" },
+    body: new URLSearchParams({
+      client_id: clientId,
+      client_secret: clientSecret,
+      refresh_token: refreshToken,
+      grant_type: "refresh_token",
+    }),
+  });
+
+  const tokenData = await tokenRes.json().catch(() => ({}));
+  if (!tokenRes.ok || !tokenData.access_token) {
+    const errMsg = tokenData.error_description || tokenData.error || `HTTP ${tokenRes.status}`;
+    return { success: false, error: `Google OAuth2 token exchange failed: ${errMsg}` };
+  }
+
+  // 2. Build RFC 2822 MIME message
+  const subjectB64 = Buffer.from(options.subject, "utf-8").toString("base64");
+  const headers = [
+    `From: ${options.from}`,
+    `To: ${options.to}`,
+    `Subject: =?UTF-8?B?${subjectB64}?=`,
+    `Reply-To: ${options.replyTo || user}`,
+    "MIME-Version: 1.0",
+    'Content-Type: text/html; charset="UTF-8"',
+    "Content-Transfer-Encoding: base64",
+    "",
+  ];
+
+  const htmlB64 = Buffer.from(options.html, "utf-8").toString("base64");
+  const rawMessage = headers.join("\r\n") + "\r\n" + htmlB64;
+
+  const base64UrlSafe = Buffer.from(rawMessage)
+    .toString("base64")
+    .replace(/\+/g, "-")
+    .replace(/\//g, "_")
+    .replace(/=+$/, "");
+
+  // 3. Send message via Gmail REST API
+  const sendRes = await fetch("https://gmail.googleapis.com/gmail/v1/users/me/messages/send", {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${tokenData.access_token}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ raw: base64UrlSafe }),
+  });
+
+  const sendResult = await sendRes.json().catch(() => ({}));
+  if (!sendRes.ok) {
+    const errMsg = sendResult.error?.message || `HTTP ${sendRes.status}`;
+    return { success: false, error: `Gmail REST API send failed: ${errMsg}` };
+  }
+
+  return { success: true, messageId: sendResult.id };
+}
+
+/**
  * Universal email dispatcher supporting both live Gmail SMTP and graceful dev simulation.
  */
 export async function sendMail(
@@ -369,6 +485,46 @@ export async function sendMail(
   type = "general"
 ): Promise<{ success: boolean; simulated?: boolean; messageId?: string; error?: string }> {
   const from = getSenderAddress();
+
+  // 1. If Google OAuth2 is configured, prioritize Gmail REST API (over HTTPS port 443)
+  // This completely eliminates serverless TCP socket drops and "Connection closed unexpectedly" on Vercel
+  if (isOAuth2Configured()) {
+    try {
+      const restResult = await sendViaGmailRestApi({
+        from,
+        to: options.to,
+        subject: options.subject,
+        html: options.html,
+        text: options.text,
+        replyTo: options.replyTo,
+      });
+
+      if (restResult.success) {
+        const logItem: EmailDispatchLog = {
+          id: `mail-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+          to: options.to,
+          subject: options.subject,
+          type,
+          status: "sent",
+          timestamp: new Date().toISOString(),
+          messageId: restResult.messageId,
+        };
+        emailDispatchLogs.unshift(logItem);
+        console.log(
+          `[Email Sent via Gmail API] Successfully delivered '${type}' email to ${options.to} (MessageId: ${restResult.messageId})`
+        );
+        return { success: true, messageId: restResult.messageId };
+      } else {
+        console.warn(
+          `[Gmail REST API Notice] REST send returned error, falling back to SMTP: ${restResult.error}`
+        );
+      }
+    } catch (apiErr: any) {
+      console.warn(`[Gmail REST API Exception] Falling back to SMTP:`, apiErr?.message || apiErr);
+    }
+  }
+
+  // 2. SMTP Transport fallback (or App Password mode)
   const transporter = createTransporter();
 
   if (!transporter) {

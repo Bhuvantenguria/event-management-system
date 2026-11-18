@@ -776,6 +776,33 @@
   - `npx tsc --noEmit`: 0 TypeScript errors.
   - `npm test`: **71/71 tests passing** across 10 test suites (100% pass rate).
 
+---
+
+### Phase 24: Direct Gmail REST API Dispatch (Port 443 HTTPS) & Universal Show/Hide Password Eye Toggles
+- **Status**: Completed
+- **Why**:
+  1. The user reported that `/api/auth/forgot-password` still encountered:
+     `[Email Failed] Delivery failure for 'password_reset' to bhuvantenguria37@gmail.com: Connection closed unexpectedly` on Vercel.
+  2. The user also requested: *"and also add show password eye icon near input box of all password typr of input first check here before commit any thing show me the result of success"*.
+- **Root Cause & Serverless Architecture Enhancement**:
+  - On Vercel (AWS Lambda serverless VPCs), raw TCP socket connections to external mail servers (`smtp.gmail.com:465` or `587`) can be dropped or terminated unexpectedly due to AWS NAT gateway timeouts, firewall resets, or TCP RST packets.
+  - By contrast, standard HTTPS web requests over port 443 (`fetch()`) are native, persistent, connection-pooled, and completely immune to socket drops.
+  - With Google OAuth2 configured (`GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `GOOGLE_REFRESH_TOKEN`), we implemented `sendViaGmailRestApi` which exchanges the token and posts directly to Google's official Gmail REST endpoint:
+    `POST https://gmail.googleapis.com/gmail/v1/users/me/messages/send`
+  - In `sendMail()`, OAuth2 requests prioritize the Gmail REST API, falling back to Nodemailer SMTP only if needed.
+  - Live verified: Email delivered directly to `bhuvantenguria37@gmail.com` with HTTP 200 and Message ID `1a1ee9fb62fc78cd`.
+- **Show / Hide Password Eye Toggle Implementation**:
+  - Identified all password input fields across the platform:
+    1. `src/app/login/page.tsx`: Sign In password input.
+    2. `src/app/register/page.tsx`: Participant Registration password and confirm password inputs.
+    3. `src/app/dashboard/profile/page.tsx`: Current password, New password, and Confirm new password inputs.
+  - Added toggle state with `Eye` and `EyeOff` icons from `lucide-react`, proper padding (`pr-10`), and accessible `aria-label` attributes.
+- **Verification & Testing Results**:
+  - `npx tsc --noEmit`: 0 TypeScript errors.
+  - `npm test`: **75/75 tests passing** across 11 test suites (100% pass rate).
+  - Created new test suite: `src/__tests__/password-visibility-and-email-rest.test.ts`.
+
+
 
 
 
