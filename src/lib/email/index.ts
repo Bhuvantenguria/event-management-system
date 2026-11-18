@@ -36,12 +36,44 @@ function cleanEnv(val?: string): string {
 }
 
 /**
+ * Robustly cleans and extracts a raw OAuth token or refresh token even if pasted as a query string or JSON.
+ */
+export function cleanOAuthToken(val?: string): string {
+  if (!val) return "";
+  let trimmed = cleanEnv(val);
+  // Handle JSON if user pasted JSON response from OAuth playground
+  if (trimmed.startsWith("{") && trimmed.includes("refresh_token")) {
+    try {
+      const parsed = JSON.parse(trimmed);
+      if (parsed.refresh_token) return String(parsed.refresh_token).trim();
+    } catch {
+      const m = trimmed.match(/"refresh_token"\s*:\s*"([^"]+)"/);
+      if (m) return m[1].trim();
+    }
+  }
+  // If query string with & e.g. "refresh_token=XYZ&..." or "code=XYZ&..."
+  if (trimmed.includes("&")) {
+    const parts = trimmed.split("&");
+    const rfPart = parts.find((p) => p.startsWith("refresh_token="));
+    if (rfPart) {
+      return rfPart.replace("refresh_token=", "").trim();
+    }
+    const codePart = parts.find((p) => p.startsWith("code="));
+    if (codePart) {
+      return codePart.replace("code=", "").trim();
+    }
+    trimmed = parts[0].replace(/^code=/, "").replace(/^refresh_token=/, "").trim();
+  }
+  return trimmed;
+}
+
+/**
  * Checks whether Google OAuth2 credentials have been provided in the environment.
  */
 export function isOAuth2Configured(): boolean {
   const clientId = cleanEnv(process.env.GOOGLE_CLIENT_ID);
   const clientSecret = cleanEnv(process.env.GOOGLE_CLIENT_SECRET);
-  const refreshToken = cleanEnv(process.env.GOOGLE_REFRESH_TOKEN);
+  const refreshToken = cleanOAuthToken(process.env.GOOGLE_REFRESH_TOKEN);
   const user = cleanEnv(process.env.GMAIL_USER) || cleanEnv(process.env.SMTP_USER);
 
   if (!clientId || !clientSecret || !refreshToken || !user) return false;
@@ -124,7 +156,7 @@ export function createTransporter() {
     const user = cleanEnv(process.env.GMAIL_USER) || cleanEnv(process.env.SMTP_USER);
     const clientId = cleanEnv(process.env.GOOGLE_CLIENT_ID);
     const clientSecret = cleanEnv(process.env.GOOGLE_CLIENT_SECRET);
-    const refreshToken = cleanEnv(process.env.GOOGLE_REFRESH_TOKEN);
+    const refreshToken = cleanOAuthToken(process.env.GOOGLE_REFRESH_TOKEN);
 
     return nodemailer.createTransport({
       host: "smtp.gmail.com",

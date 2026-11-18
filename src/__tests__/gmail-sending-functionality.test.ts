@@ -2,6 +2,7 @@ import { describe, it, expect, beforeEach, vi } from "vitest";
 import {
   isSmtpConfigured,
   isOAuth2Configured,
+  cleanOAuthToken,
   getSenderAddress,
   createTransporter,
   verifySmtpConnection,
@@ -93,6 +94,24 @@ describe("Gmail SMTP Email Sending Pipeline & Diagnostics", () => {
       else delete process.env.GOOGLE_REFRESH_TOKEN;
       if (origGmailUser) process.env.GMAIL_USER = origGmailUser;
       else delete process.env.GMAIL_USER;
+    });
+
+    it("should sanitize and extract raw OAuth token from playground query strings and JSON payloads", () => {
+      // 1. Raw token with query parameters attached
+      const rawQueryString =
+        "fYP3JLhchi5Wohr4u03Azs6bXEHdRlRdMi0k_ws5UzKVNB82z_NFe7F92CbfyVA&redirect_uri=https%3A%2F%2Fdevelopers.google.com%2Foauthplayground&client_id=407408718192.apps.googleusercontent.com&client_secret=************&scope=&grant_type=authorization_code";
+      expect(cleanOAuthToken(rawQueryString)).toBe("fYP3JLhchi5Wohr4u03Azs6bXEHdRlRdMi0k_ws5UzKVNB82z_NFe7F92CbfyVA");
+
+      // 2. Query string with refresh_token= prefix
+      const rfQueryString = "refresh_token=1//04mockRefreshTokenXYZ&scope=https://mail.google.com/";
+      expect(cleanOAuthToken(rfQueryString)).toBe("1//04mockRefreshTokenXYZ");
+
+      // 3. JSON response from Google OAuth endpoint
+      const jsonResponse = '{"access_token":"ya29.mock","refresh_token":"1//04actualRefreshToken123","expires_in":3599}';
+      expect(cleanOAuthToken(jsonResponse)).toBe("1//04actualRefreshToken123");
+
+      // 4. Standard clean token with quotes
+      expect(cleanOAuthToken('"1//04cleanToken"')).toBe("1//04cleanToken");
     });
 
     it("should compute robust sender address matching authenticated user", () => {
@@ -189,6 +208,24 @@ describe("Gmail SMTP Email Sending Pipeline & Diagnostics", () => {
       else delete process.env.GOOGLE_REFRESH_TOKEN;
       if (origGmailUser) process.env.GMAIL_USER = origGmailUser;
       else delete process.env.GMAIL_USER;
+    });
+
+    it("should sanitize and extract raw OAuth token from playground query strings and JSON payloads", () => {
+      // 1. Raw token with query parameters attached
+      const rawQueryString =
+        "fYP3JLhchi5Wohr4u03Azs6bXEHdRlRdMi0k_ws5UzKVNB82z_NFe7F92CbfyVA&redirect_uri=https%3A%2F%2Fdevelopers.google.com%2Foauthplayground&client_id=407408718192.apps.googleusercontent.com&client_secret=************&scope=&grant_type=authorization_code";
+      expect(cleanOAuthToken(rawQueryString)).toBe("fYP3JLhchi5Wohr4u03Azs6bXEHdRlRdMi0k_ws5UzKVNB82z_NFe7F92CbfyVA");
+
+      // 2. Query string with refresh_token= prefix
+      const rfQueryString = "refresh_token=1//04mockRefreshTokenXYZ&scope=https://mail.google.com/";
+      expect(cleanOAuthToken(rfQueryString)).toBe("1//04mockRefreshTokenXYZ");
+
+      // 3. JSON response from Google OAuth endpoint
+      const jsonResponse = '{"access_token":"ya29.mock","refresh_token":"1//04actualRefreshToken123","expires_in":3599}';
+      expect(cleanOAuthToken(jsonResponse)).toBe("1//04actualRefreshToken123");
+
+      // 4. Standard clean token with quotes
+      expect(cleanOAuthToken('"1//04cleanToken"')).toBe("1//04cleanToken");
     });
   });
 
